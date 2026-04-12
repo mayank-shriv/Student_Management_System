@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Faculty Dashboard — Manage students, subjects, attendance, and marks">
+  <title>Faculty Dashboard — Student Management System</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <button class="mobile-toggle" id="mobile-toggle">☰</button>
+
+  <div class="dashboard">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>Student MS</h2>
+        <span>Faculty Panel</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-item active" data-tab="students">
+          <span class="icon">👨‍🎓</span>
+          <span>Students</span>
+        </div>
+        <div class="nav-item" data-tab="subjects">
+          <span class="icon">📚</span>
+          <span>Subjects</span>
+        </div>
+        <div class="nav-item" data-tab="attendance">
+          <span class="icon">📋</span>
+          <span>Attendance</span>
+        </div>
+        <div class="nav-item" data-tab="marks">
+          <span class="icon">📝</span>
+          <span>Marks</span>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="user-avatar">F</div>
+          <div>
+            <div class="user-name" id="user-name">Faculty</div>
+            <div class="user-role">Faculty</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm btn-block" id="logout-btn">Logout</button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- ═══ STUDENTS TAB ═══ -->
+      <div class="tab-content active" id="tab-students">
+        <div class="page-header">
+          <div>
+            <h1>Students</h1>
+            <p>View all registered students</p>
+          </div>
+        </div>
+
+        <div class="stats-grid" id="students-stats"></div>
+
+        <div class="table-container">
+          <div class="table-header">
+            <h3>All Students</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Enrollment No.</th>
+                <th>Department</th>
+              </tr>
+            </thead>
+            <tbody id="students-table-body">
+              <tr><td colspan="4" class="text-center" style="padding:2rem; color:var(--text-muted);">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ SUBJECTS TAB ═══ -->
+      <div class="tab-content" id="tab-subjects">
+        <div class="page-header">
+          <div>
+            <h1>Subjects</h1>
+            <p>Create and manage subjects</p>
+          </div>
+          <button class="btn btn-primary" id="add-subject-btn">+ Add Subject</button>
+        </div>
+
+        <div class="table-container">
+          <div class="table-header">
+            <h3>All Subjects</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Faculty</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="subjects-table-body">
+              <tr><td colspan="4" class="text-center" style="padding:2rem; color:var(--text-muted);">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ ATTENDANCE TAB ═══ -->
+      <div class="tab-content" id="tab-attendance">
+        <div class="page-header">
+          <div>
+            <h1>Attendance</h1>
+            <p>Mark and view attendance</p>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <div class="table-header">
+            <h3>Mark Attendance</h3>
+          </div>
+          <div style="padding:1.5rem;">
+            <div class="form-row mb-2">
+              <div class="form-group">
+                <label for="att-subject">Subject</label>
+                <select id="att-subject">
+                  <option value="">Select subject</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="att-date">Date</label>
+                <input type="date" id="att-date">
+              </div>
+            </div>
+
+            <div id="attendance-list" class="attendance-grid">
+              <div class="empty-state">
+                <p>Select a subject to load students</p>
+              </div>
+            </div>
+
+            <div class="mt-2">
+              <button class="btn btn-success" id="submit-attendance-btn" disabled>Submit Attendance</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- View attendance section -->
+        <div class="table-container mt-2">
+          <div class="table-header">
+            <h3>View Attendance Records</h3>
+            <div class="toolbar">
+              <select id="att-view-subject" class="search-input" style="min-width:180px;">
+                <option value="">Select subject</option>
+              </select>
+              <button class="btn btn-secondary btn-sm" id="load-attendance-btn">Load</button>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Enrollment</th>
+                <th>Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="attendance-records-body">
+              <tr><td colspan="4" class="text-center" style="padding:2rem; color:var(--text-muted);">Select a subject to view records</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ MARKS TAB ═══ -->
+      <div class="tab-content" id="tab-marks">
+        <div class="page-header">
+          <div>
+            <h1>Marks</h1>
+            <p>Add and manage student marks</p>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <div class="table-header">
+            <h3>Add Marks</h3>
+          </div>
+          <div style="padding:1.5rem;">
+            <div class="form-group mb-2">
+              <label for="marks-subject">Subject</label>
+              <select id="marks-subject">
+                <option value="">Select subject</option>
+              </select>
+            </div>
+
+            <div id="marks-list" class="attendance-grid">
+              <div class="empty-state">
+                <p>Select a subject to load students</p>
+              </div>
+            </div>
+
+            <div class="mt-2">
+              <button class="btn btn-success" id="submit-marks-btn" disabled>Submit Marks</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- View marks section -->
+        <div class="table-container mt-2">
+          <div class="table-header">
+            <h3>View Marks</h3>
+            <div class="toolbar">
+              <select id="marks-view-subject" class="search-input" style="min-width:180px;">
+                <option value="">Select subject</option>
+              </select>
+              <button class="btn btn-secondary btn-sm" id="load-marks-btn">Load</button>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Student</th>
+                <th>Enrollment</th>
+                <th>Marks</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="marks-records-body">
+              <tr><td colspan="4" class="text-center" style="padding:2rem; color:var(--text-muted);">Select a subject to view marks</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Add Subject Modal -->
+  <div class="modal-overlay" id="subject-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Add New Subject</h3>
+        <button class="modal-close" id="close-subject-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="subject-form">
+          <div class="form-group">
+            <label for="subject-name">Subject Name</label>
+            <input type="text" id="subject-name" placeholder="e.g. Data Structures" required>
+          </div>
+          <div class="form-group">
+            <label for="subject-code">Subject Code</label>
+            <input type="text" id="subject-code" placeholder="e.g. CS201" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancel-subject-btn">Cancel</button>
+        <button class="btn btn-primary" id="save-subject-btn">Save Subject</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Marks Modal -->
+  <div class="modal-overlay" id="edit-marks-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Edit Marks</h3>
+        <button class="modal-close" id="close-edit-marks-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <form id="edit-marks-form">
+          <input type="hidden" id="edit-mark-id">
+          <div class="form-group">
+            <label for="edit-marks-value">Marks (0-100)</label>
+            <input type="number" id="edit-marks-value" min="0" max="100" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancel-edit-marks-btn">Cancel</button>
+        <button class="btn btn-primary" id="save-edit-marks-btn">Update Marks</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/js/faculty.js"></script>
+</body>
+</html>

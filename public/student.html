@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Student Dashboard — View your attendance, marks, and subjects">
+  <title>Student Dashboard — Student Management System</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <button class="mobile-toggle" id="mobile-toggle">☰</button>
+
+  <div class="dashboard">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <h2>Student MS</h2>
+        <span>Student Panel</span>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-item active" data-tab="overview">
+          <span class="icon">📊</span>
+          <span>Overview</span>
+        </div>
+        <div class="nav-item" data-tab="attendance">
+          <span class="icon">📋</span>
+          <span>Attendance</span>
+        </div>
+        <div class="nav-item" data-tab="marks">
+          <span class="icon">📝</span>
+          <span>Marks</span>
+        </div>
+        <div class="nav-item" data-tab="subjects">
+          <span class="icon">📚</span>
+          <span>Subjects</span>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="user-avatar">S</div>
+          <div>
+            <div class="user-name" id="user-name">Student</div>
+            <div class="user-role">Student</div>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm btn-block" id="logout-btn">Logout</button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- ═══ OVERVIEW TAB ═══ -->
+      <div class="tab-content active" id="tab-overview">
+        <div class="page-header">
+          <div>
+            <h1 id="greeting">Welcome back!</h1>
+            <p id="student-info">Loading your dashboard...</p>
+          </div>
+        </div>
+
+        <div class="stats-grid" id="overview-stats">
+          <div class="stat-card">
+            <div class="loading-overlay"><div class="spinner"></div></div>
+          </div>
+          <div class="stat-card">
+            <div class="loading-overlay"><div class="spinner"></div></div>
+          </div>
+          <div class="stat-card">
+            <div class="loading-overlay"><div class="spinner"></div></div>
+          </div>
+        </div>
+
+        <!-- Quick Attendance Per Subject -->
+        <div class="table-container">
+          <div class="table-header">
+            <h3>Attendance by Subject</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Present</th>
+                <th>Total</th>
+                <th>Percentage</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="overview-attendance-body">
+              <tr><td colspan="5" class="text-center" style="padding:2rem;color:var(--text-muted);">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Quick Marks -->
+        <div class="table-container mt-2">
+          <div class="table-header">
+            <h3>Marks Overview</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Code</th>
+                <th>Marks</th>
+                <th>Grade</th>
+              </tr>
+            </thead>
+            <tbody id="overview-marks-body">
+              <tr><td colspan="4" class="text-center" style="padding:2rem;color:var(--text-muted);">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ ATTENDANCE TAB ═══ -->
+      <div class="tab-content" id="tab-attendance">
+        <div class="page-header">
+          <div>
+            <h1>My Attendance</h1>
+            <p>Detailed attendance records</p>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <div class="table-header">
+            <h3>All Attendance Records</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Subject</th>
+                <th>Code</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="attendance-detail-body">
+              <tr><td colspan="4" class="text-center" style="padding:2rem;color:var(--text-muted);">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ MARKS TAB ═══ -->
+      <div class="tab-content" id="tab-marks">
+        <div class="page-header">
+          <div>
+            <h1>My Marks</h1>
+            <p>View your marks for all subjects</p>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <div class="table-header">
+            <h3>All Marks</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Subject</th>
+                <th>Code</th>
+                <th>Marks</th>
+                <th>Grade</th>
+              </tr>
+            </thead>
+            <tbody id="marks-detail-body">
+              <tr><td colspan="4" class="text-center" style="padding:2rem;color:var(--text-muted);">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ═══ SUBJECTS TAB ═══ -->
+      <div class="tab-content" id="tab-subjects">
+        <div class="page-header">
+          <div>
+            <h1>My Subjects</h1>
+            <p>Subjects you are enrolled in</p>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <div class="table-header">
+            <h3>Enrolled Subjects</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Subject Name</th>
+                <th>Faculty</th>
+              </tr>
+            </thead>
+            <tbody id="subjects-detail-body">
+              <tr><td colspan="3" class="text-center" style="padding:2rem;color:var(--text-muted);">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/js/student.js"></script>
+</body>
+</html>

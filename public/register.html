@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Student Management System — Create your account">
+  <title>Register — Student Management System</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-container">
+    <div class="auth-card">
+      <h1>Create Account</h1>
+      <p class="subtitle">Register as Faculty or Student</p>
+
+      <div id="alert-box" class="hidden" style="padding:0.75rem 1rem; border-radius:var(--radius-md); margin-bottom:1rem; font-size:0.85rem;"></div>
+
+      <form id="register-form" autocomplete="on">
+        <div class="form-group">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" name="name" placeholder="John Doe" required>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Min 6 characters with a number" required autocomplete="new-password">
+        </div>
+
+        <div class="form-group">
+          <label for="role">Role</label>
+          <select id="role" name="role" required>
+            <option value="">Select your role</option>
+            <option value="faculty">Faculty</option>
+            <option value="student">Student</option>
+          </select>
+        </div>
+
+        <div id="student-fields" class="student-fields">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="enrollment_no">Enrollment No.</label>
+              <input type="text" id="enrollment_no" name="enrollment_no" placeholder="e.g. ENR2024001">
+            </div>
+            <div class="form-group">
+              <label for="department">Department</label>
+              <input type="text" id="department" name="department" placeholder="e.g. Computer Science">
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-block" id="register-btn">
+          Create Account
+        </button>
+      </form>
+
+      <p class="text-center mt-2" style="font-size:0.85rem; color:var(--text-secondary);">
+        Already have an account? <a href="/">Sign in</a>
+      </p>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="/js/auth.js"></script>
+</body>
+</html>

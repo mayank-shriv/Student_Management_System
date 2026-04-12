@@ -1,0 +1,86 @@
+import { Attendance, Student, Subject, User } from '../models/index.js';
+import AppError from '../utils/AppError.js';
+
+export const markAttendance = async (req, res, next) => {
+  try {
+    const { subject_id, date, records } = req.body;
+
+    const subject = await Subject.findByPk(subject_id);
+    if (!subject) {
+      throw new AppError('Subject not found.', 404);
+    }
+
+    const results = [];
+    for (const record of records) {
+      const { student_id, status } = record;
+
+      const student = await Student.findByPk(student_id);
+      if (!student) {
+        results.push({ student_id, error: 'Student not found' });
+        continue;
+      }
+
+      const [attendance, created] = await Attendance.findOrCreate({
+        where: { student_id, subject_id, date },
+        defaults: { status },
+      });
+
+      if (!created) {
+        attendance.status = status;
+        await attendance.save();
+      }
+
+      results.push({
+        student_id,
+        status,
+        action: created ? 'created' : 'updated',
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: `Attendance marked for ${date}`,
+      data: { results },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getAttendanceBySubject = async (req, res, next) => {
+  try {
+    const { subjectId } = req.params;
+
+    const subject = await Subject.findByPk(subjectId);
+    if (!subject) {
+      throw new AppError('Subject not found.', 404);
+    }
+
+    const attendance = await Attendance.findAll({
+      where: { subject_id: subjectId },
+      include: [
+        {
+          model: Student,
+          as: 'student',
+          attributes: ['id', 'enrollment_no', 'department'],
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['name', 'email'],
+            },
+          ],
+        },
+      ],
+      order: [['date', 'DESC']],
+    });
+
+    res.status(200).json({
+      status: 'success',
+      results: attendance.length,
+      data: { subject: subject.name, attendance },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
