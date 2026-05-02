@@ -10,6 +10,10 @@ export const addMarks = async (req, res, next) => {
       throw new AppError('Subject not found.', 404);
     }
 
+    if (subject.faculty_id !== req.user.id) {
+      throw new AppError('You can only add marks for your own subjects.', 403);
+    }
+
     const results = [];
     for (const record of records) {
       const { student_id, marks } = record;
@@ -54,6 +58,11 @@ export const updateMarks = async (req, res, next) => {
       throw new AppError('Mark record not found.', 404);
     }
 
+    const subject = await Subject.findByPk(mark.subject_id);
+    if (!subject || subject.faculty_id !== req.user.id) {
+      throw new AppError('You can only update marks for your own subjects.', 403);
+    }
+
     mark.marks = marks;
     await mark.save();
 
@@ -73,6 +82,10 @@ export const getMarksBySubject = async (req, res, next) => {
     const subject = await Subject.findByPk(subjectId);
     if (!subject) {
       throw new AppError('Subject not found.', 404);
+    }
+
+    if (subject.faculty_id !== req.user.id) {
+      throw new AppError('You can only view marks for your own subjects.', 403);
     }
 
     const marks = await Mark.findAll({

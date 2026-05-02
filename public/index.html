@@ -31,7 +31,11 @@
         </button>
       </form>
 
-      <p class="text-center mt-2" style="font-size:0.85rem; color:var(--text-secondary);">
+      <p class="text-center mt-2" style="font-size:0.85rem;">
+        <a href="/forgot-password" style="color:var(--text-secondary); transition:color 0.2s ease;" onmouseover="this.style.color='var(--accent-secondary)'" onmouseout="this.style.color='var(--text-secondary)'">Forgot your password?</a>
+      </p>
+
+      <p class="text-center mt-1" style="font-size:0.85rem; color:var(--text-secondary);">
         Don't have an account? <a href="/register">Create one</a>
       </p>
     </div>
@@ -39,6 +43,7 @@
 
   <div class="toast-container" id="toast-container"></div>
 
+  <script src="/js/common.js"></script>
   <script src="/js/auth.js"></script>
 </body>
 </html>

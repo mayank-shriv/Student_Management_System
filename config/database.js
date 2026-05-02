@@ -7,12 +7,6 @@ if (process.env.DATABASE_URL) {
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'mysql',
     logging: (msg) => logger.debug(msg),
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false,
-      },
-    },
     pool: {
       max: 5,
       min: 0,

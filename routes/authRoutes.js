@@ -1,9 +1,9 @@
 import express from 'express';
 import { body } from 'express-validator';
 import * as authController from '../controllers/authController.js';
-import auth from '../middleware/auth.js';
 import validate from '../middleware/validate.js';
 import rateLimit from 'express-rate-limit';
+import auth from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -58,7 +58,47 @@ router.post(
   authController.login
 );
 
-router.post('/logout', auth, authController.logout);
+// Rate limiter specifically for forgot-password to prevent abuse.
+const forgotPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: {
+    status: 'fail',
+    message: 'Too many password reset requests. Please try again after 15 minutes.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post(
+  '/forgot-password',
+  forgotPasswordLimiter,
+  [
+    body('email')
+      .trim()
+      .isEmail().withMessage('Please provide a valid email')
+      .normalizeEmail(),
+    validate,
+  ],
+  authController.forgotPassword
+);
+
+router.post(
+  '/reset-password',
+  [
+    body('token')
+      .trim()
+      .notEmpty().withMessage('Reset token is required'),
+    body('password')
+      .isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+      .matches(/\d/).withMessage('Password must contain a number'),
+    validate,
+  ],
+  authController.resetPassword
+);
+
+router.post('/refresh', authController.refresh);
+router.post('/logout', authController.logout);
 
 router.get('/me', auth, authController.getMe);
 

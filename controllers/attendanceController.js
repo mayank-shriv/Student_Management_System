@@ -10,6 +10,10 @@ export const markAttendance = async (req, res, next) => {
       throw new AppError('Subject not found.', 404);
     }
 
+    if (subject.faculty_id !== req.user.id) {
+      throw new AppError('You can only mark attendance for your own subjects.', 403);
+    }
+
     const results = [];
     for (const record of records) {
       const { student_id, status } = record;
@@ -54,6 +58,10 @@ export const getAttendanceBySubject = async (req, res, next) => {
     const subject = await Subject.findByPk(subjectId);
     if (!subject) {
       throw new AppError('Subject not found.', 404);
+    }
+
+    if (subject.faculty_id !== req.user.id) {
+      throw new AppError('You can only view attendance for your own subjects.', 403);
     }
 
     const attendance = await Attendance.findAll({

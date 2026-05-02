@@ -28,8 +28,23 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(255),
     allowNull: false,
     validate: {
+      // This validates the plaintext password length before the beforeCreate/
+      // beforeUpdate hooks hash it.  Do NOT assign a pre-hashed value directly
+      // to user.password — the validation would pass incorrectly.
       len: { args: [6, 255], msg: 'Password must be at least 6 characters' },
     },
+  },
+  refresh_token: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  reset_token: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  reset_token_expires: {
+    type: DataTypes.DATE,
+    allowNull: true,
   },
   role: {
     type: DataTypes.ENUM('faculty', 'student'),

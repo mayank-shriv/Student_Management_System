@@ -4,13 +4,13 @@ import AppError from '../utils/AppError.js';
 
 const auth = async (req, res, next) => {
   try {
-    const token = req.cookies?.token;
+    const token = req.cookies?.access_token;
 
     if (!token) {
       throw new AppError('Not authenticated. Please login.', 401);
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET);
 
     const user = await User.findByPk(decoded.id, {
       attributes: { exclude: ['password'] },
@@ -27,7 +27,7 @@ const auth = async (req, res, next) => {
       return next(new AppError('Invalid token. Please login again.', 401));
     }
     if (error.name === 'TokenExpiredError') {
-      return next(new AppError('Token expired. Please login again.', 401));
+      return next(new AppError('Access token expired. Please refresh your session.', 401));
     }
     next(error);
   }
