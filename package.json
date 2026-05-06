@@ -15,7 +15,7 @@
     "sequelize",
     "mysql"
   ],
-  "author": "",
+  "author": "Mayank Shrivastava",
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
