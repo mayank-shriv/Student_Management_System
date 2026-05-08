@@ -1,6 +1,15 @@
 // ── Shared Utilities ──
 // Common functions used across all frontend pages to avoid duplication.
 
+// Escapes HTML entities in a string to prevent XSS when inserting
+// user-controlled data into the DOM via innerHTML.
+function escapeHtml(str) {
+  if (str == null) return '';
+  const div = document.createElement('div');
+  div.textContent = String(str);
+  return div.innerHTML;
+}
+
 function showAlert(message, type = 'error') {
   const alertBox = document.getElementById('alert-box');
   if (!alertBox) return;

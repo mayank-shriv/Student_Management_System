@@ -28,13 +28,19 @@ const roleSelect = document.getElementById('role');
 if (roleSelect) {
   roleSelect.addEventListener('change', () => {
     const studentFields = document.getElementById('student-fields');
-    if (!studentFields) return;
+    const facultyFields = document.getElementById('faculty-fields');
 
     if (roleSelect.value === 'student') {
-      studentFields.classList.add('visible');
+      if (studentFields) studentFields.classList.add('visible');
+      if (facultyFields) facultyFields.classList.remove('visible');
       document.getElementById('enrollment_no').required = true;
+    } else if (roleSelect.value === 'faculty') {
+      if (studentFields) studentFields.classList.remove('visible');
+      if (facultyFields) facultyFields.classList.add('visible');
+      document.getElementById('enrollment_no').required = false;
     } else {
-      studentFields.classList.remove('visible');
+      if (studentFields) studentFields.classList.remove('visible');
+      if (facultyFields) facultyFields.classList.remove('visible');
       document.getElementById('enrollment_no').required = false;
     }
   });
@@ -88,16 +94,31 @@ if (registerForm) {
     btn.disabled = true;
     btn.textContent = 'Creating account...';
 
+    const password = document.getElementById('password').value;
+    const confirmPassword = document.getElementById('confirm-password').value;
+
+    if (password !== confirmPassword) {
+      showAlert('Passwords do not match.');
+      btn.disabled = false;
+      btn.textContent = 'Create Account';
+      return;
+    }
+
     const body = {
       name: document.getElementById('name').value.trim(),
       email: document.getElementById('email').value.trim(),
-      password: document.getElementById('password').value,
+      password,
       role: document.getElementById('role').value,
     };
 
     if (body.role === 'student') {
       body.enrollment_no = document.getElementById('enrollment_no').value.trim();
       body.department = document.getElementById('department').value.trim();
+    }
+
+    if (body.role === 'faculty') {
+      const inviteInput = document.getElementById('invite_code');
+      body.invite_code = inviteInput ? inviteInput.value.trim() : '';
     }
 
     try {

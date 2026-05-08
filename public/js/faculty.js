@@ -86,10 +86,10 @@ function renderStudents() {
 
   tbody.innerHTML = allStudents.map((student) => `
       <tr>
-        <td><strong>${student.user.name}</strong></td>
-        <td>${student.user.email}</td>
-        <td><span class="badge badge-info">${student.enrollment_no}</span></td>
-        <td>${student.department || '-'}</td>
+        <td><strong>${escapeHtml(student.user.name)}</strong></td>
+        <td>${escapeHtml(student.user.email)}</td>
+        <td><span class="badge badge-info">${escapeHtml(student.enrollment_no)}</span></td>
+        <td>${escapeHtml(student.department || '-')}</td>
       </tr>
     `).join('');
 }
@@ -122,11 +122,11 @@ function renderSubjects() {
 
   tbody.innerHTML = allSubjects.map((subject) => `
       <tr>
-        <td><span class="badge badge-info">${subject.code}</span></td>
-        <td><strong>${subject.name}</strong></td>
-        <td>${subject.faculty ? subject.faculty.name : '-'}</td>
+        <td><span class="badge badge-info">${escapeHtml(subject.code)}</span></td>
+        <td><strong>${escapeHtml(subject.name)}</strong></td>
+        <td>${subject.faculty ? escapeHtml(subject.faculty.name) : '-'}</td>
         <td>
-          <button class="btn btn-danger btn-sm" onclick="deleteSubject(${subject.id})">Delete</button>
+          <button class="btn btn-danger btn-sm delete-subject-btn" data-id="${subject.id}">Delete</button>
         </td>
       </tr>
     `).join('');
@@ -217,7 +217,7 @@ document.getElementById('att-subject').addEventListener('change', () => {
 
   listEl.innerHTML = allStudents.map((student) => `
       <div class="attendance-row">
-        <span class="student-name">${student.user.name} <span style="color:var(--text-muted);font-size:0.8rem;">(${student.enrollment_no})</span></span>
+        <span class="student-name">${escapeHtml(student.user.name)} <span style="color:var(--text-muted);font-size:0.8rem;">(${escapeHtml(student.enrollment_no)})</span></span>
         <div class="attendance-toggle">
           <label>
             <input type="radio" name="att-${student.id}" value="present" checked>
@@ -280,8 +280,8 @@ document.getElementById('load-attendance-btn').addEventListener('click', async (
 
     tbody.innerHTML = data.data.attendance.map((attendance) => `
         <tr>
-          <td>${attendance.student?.user?.name || '-'}</td>
-          <td><span class="badge badge-info">${attendance.student?.enrollment_no || '-'}</span></td>
+          <td>${escapeHtml(attendance.student?.user?.name || '-')}</td>
+          <td><span class="badge badge-info">${escapeHtml(attendance.student?.enrollment_no || '-')}</span></td>
           <td>${attendance.date}</td>
           <td><span class="badge ${attendance.status === 'present' ? 'badge-success' : 'badge-danger'}">${attendance.status}</span></td>
         </tr>
@@ -310,7 +310,7 @@ document.getElementById('marks-subject').addEventListener('change', () => {
 
   listEl.innerHTML = allStudents.map((student) => `
       <div class="attendance-row">
-        <span class="student-name">${student.user.name} <span style="color:var(--text-muted);font-size:0.8rem;">(${student.enrollment_no})</span></span>
+        <span class="student-name">${escapeHtml(student.user.name)} <span style="color:var(--text-muted);font-size:0.8rem;">(${escapeHtml(student.enrollment_no)})</span></span>
         <div>
           <input type="number" class="search-input" style="width:80px; text-align:center;"
                  id="marks-input-${student.id}" min="0" max="100" placeholder="0-100">
@@ -382,11 +382,11 @@ document.getElementById('load-marks-btn').addEventListener('click', async () => 
 
     tbody.innerHTML = data.data.marks.map((mark) => `
         <tr>
-          <td>${mark.student?.user?.name || '-'}</td>
-          <td><span class="badge badge-info">${mark.student?.enrollment_no || '-'}</span></td>
+          <td>${escapeHtml(mark.student?.user?.name || '-')}</td>
+          <td><span class="badge badge-info">${escapeHtml(mark.student?.enrollment_no || '-')}</span></td>
           <td><strong>${mark.marks}</strong>/100</td>
           <td>
-            <button class="btn btn-secondary btn-sm" onclick="openEditMarks(${mark.id}, ${mark.marks})">Edit</button>
+            <button class="btn btn-secondary btn-sm edit-marks-btn" data-id="${mark.id}" data-marks="${mark.marks}">Edit</button>
           </td>
         </tr>
       `).join('');
@@ -436,6 +436,22 @@ document.querySelectorAll('.modal-overlay').forEach((overlay) => {
       overlay.classList.remove('active');
     }
   });
+});
+
+// Event delegation for dynamically created buttons (replaces inline onclick
+// handlers that would conflict with the Content Security Policy).
+document.addEventListener('click', (e) => {
+  const deleteBtn = e.target.closest('.delete-subject-btn');
+  if (deleteBtn) {
+    deleteSubject(parseInt(deleteBtn.dataset.id, 10));
+    return;
+  }
+
+  const editBtn = e.target.closest('.edit-marks-btn');
+  if (editBtn) {
+    openEditMarks(parseInt(editBtn.dataset.id, 10), parseInt(editBtn.dataset.marks, 10));
+    return;
+  }
 });
 
 checkAuth();

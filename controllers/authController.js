@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { User, Student } from '../models/index.js';
+import { User, Student, sequelize } from '../models/index.js';
 import AppError from '../utils/AppError.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
 import logger from '../config/logger.js';
@@ -92,19 +92,28 @@ const sendTokenResponse = async (user, statusCode, res) => {
 };
 
 export const register = async (req, res, next) => {
+  const t = await sequelize.transaction();
   try {
-    const { name, email, password, role, enrollment_no, department } = req.body;
+    const { name, email, password, role, enrollment_no, department, invite_code } = req.body;
 
-    const existingUser = await User.findOne({ where: { email } });
+    // Faculty registration requires a valid invite code to prevent
+    // unauthorized privilege escalation.
+    if (role === 'faculty') {
+      const expectedCode = process.env.FACULTY_INVITE_CODE;
+      if (!expectedCode || invite_code !== expectedCode) {
+        throw new AppError('Invalid or missing faculty invite code.', 403);
+      }
+    }
+
+    const existingUser = await User.findOne({ where: { email }, transaction: t });
     if (existingUser) {
       throw new AppError('Email already registered.', 409);
     }
 
-    const user = await User.create({ name, email, password, role });
+    const user = await User.create({ name, email, password, role }, { transaction: t });
 
     if (role === 'student') {
       if (!enrollment_no) {
-        await user.destroy();
         throw new AppError('Enrollment number is required for students.', 400);
       }
 
@@ -112,11 +121,13 @@ export const register = async (req, res, next) => {
         user_id: user.id,
         enrollment_no,
         department: department || null,
-      });
+      }, { transaction: t });
     }
 
+    await t.commit();
     await sendTokenResponse(user, 201, res);
   } catch (error) {
+    await t.rollback();
     next(error);
   }
 };

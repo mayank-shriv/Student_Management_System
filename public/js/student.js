@@ -105,7 +105,7 @@ async function loadDashboard() {
         const cls = getAttendanceClass(attendance.percentage);
         return `
           <tr>
-            <td><strong>${attendance.subject.name}</strong></td>
+            <td><strong>${escapeHtml(attendance.subject.name)}</strong></td>
             <td>${attendance.present}</td>
             <td>${attendance.total}</td>
             <td>
@@ -130,8 +130,8 @@ async function loadDashboard() {
         const grade = getGrade(mark.marks);
         return `
           <tr>
-            <td><strong>${mark.subject.name}</strong></td>
-            <td><span class="badge badge-info">${mark.subject.code}</span></td>
+            <td><strong>${escapeHtml(mark.subject.name)}</strong></td>
+            <td><span class="badge badge-info">${escapeHtml(mark.subject.code)}</span></td>
             <td><strong>${mark.marks}</strong>/100</td>
             <td><span class="badge ${grade.class}">${grade.grade}</span></td>
           </tr>
@@ -156,8 +156,8 @@ async function loadAttendance() {
     tbody.innerHTML = data.data.attendance.map((attendance) => `
       <tr>
         <td>${attendance.date}</td>
-        <td><strong>${attendance.subject.name}</strong></td>
-        <td><span class="badge badge-info">${attendance.subject.code}</span></td>
+        <td><strong>${escapeHtml(attendance.subject.name)}</strong></td>
+        <td><span class="badge badge-info">${escapeHtml(attendance.subject.code)}</span></td>
         <td><span class="badge ${attendance.status === 'present' ? 'badge-success' : 'badge-danger'}">${attendance.status}</span></td>
       </tr>
     `).join('');
@@ -180,8 +180,8 @@ async function loadMarks() {
       const grade = getGrade(mark.marks);
       return `
         <tr>
-          <td><strong>${mark.subject.name}</strong></td>
-          <td><span class="badge badge-info">${mark.subject.code}</span></td>
+          <td><strong>${escapeHtml(mark.subject.name)}</strong></td>
+          <td><span class="badge badge-info">${escapeHtml(mark.subject.code)}</span></td>
           <td><strong>${mark.marks}</strong>/100</td>
           <td><span class="badge ${grade.class}">${grade.grade}</span></td>
         </tr>
@@ -204,9 +204,9 @@ async function loadSubjects() {
 
     tbody.innerHTML = data.data.subjects.map((subject) => `
       <tr>
-        <td><span class="badge badge-info">${subject.code}</span></td>
-        <td><strong>${subject.name}</strong></td>
-        <td>${subject.faculty?.name || '-'}</td>
+        <td><span class="badge badge-info">${escapeHtml(subject.code)}</span></td>
+        <td><strong>${escapeHtml(subject.name)}</strong></td>
+        <td>${subject.faculty ? escapeHtml(subject.faculty.name) : '-'}</td>
       </tr>
     `).join('');
   } catch (error) {
