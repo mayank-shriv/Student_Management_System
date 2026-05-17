@@ -5,18 +5,24 @@
 // pages so an authenticated user can still use the reset flow (Fix #10).
 const authRedirectPaths = ['/', '/login', '/register'];
 
+// Flag set to true when a redirect is about to happen.  GSI initialization
+// checks this to avoid creating iframes on a page that's about to unload
+// (which would cause the "postMessage on null" error).
+let isRedirecting = false;
+
 async function checkAuth() {
   try {
     const data = await apiRequest('/api/auth/me');
     const role = data.data.user.role;
 
+    isRedirecting = true;
     if (role === 'faculty') {
       window.location.href = '/faculty';
     } else {
       window.location.href = '/student';
     }
   } catch (error) {
-    // Not logged in, stay on page
+    // Not logged in, stay on page — now safe to init GSI.
   }
 }
 
@@ -27,23 +33,41 @@ if (authRedirectPaths.includes(window.location.pathname)) {
 // ── Google Sign-In ──
 // Initialize Google Identity Services when the GSI script has loaded.
 function initGoogleSignIn() {
+  // Don't init GSI if the page is about to redirect (causes postMessage error).
+  if (isRedirecting) return;
+
   const googleBtnContainer = document.getElementById('google-signin-btn');
-  if (!googleBtnContainer || typeof google === 'undefined') return;
+  if (!googleBtnContainer) {
+    console.warn('[GSI] No #google-signin-btn container found on page.');
+    return;
+  }
+  if (typeof google === 'undefined' || !google.accounts) {
+    console.warn('[GSI] Google Identity Services library not loaded.');
+    return;
+  }
+  if (!window.__GOOGLE_CLIENT_ID__) {
+    console.warn('[GSI] No Google Client ID available.');
+    return;
+  }
 
-  google.accounts.id.initialize({
-    client_id: window.__GOOGLE_CLIENT_ID__,
-    callback: handleGoogleCredential,
-  });
+  try {
+    google.accounts.id.initialize({
+      client_id: window.__GOOGLE_CLIENT_ID__,
+      callback: handleGoogleCredential,
+    });
 
-  google.accounts.id.renderButton(googleBtnContainer, {
-    type: 'standard',
-    theme: 'filled_black',
-    size: 'large',
-    width: '100%',
-    text: 'signin_with',
-    shape: 'rectangular',
-    logo_alignment: 'center',
-  });
+    google.accounts.id.renderButton(googleBtnContainer, {
+      type: 'standard',
+      theme: 'filled_black',
+      size: 'large',
+      width: googleBtnContainer.offsetWidth || 380,
+      text: 'signin_with',
+      shape: 'rectangular',
+      logo_alignment: 'center',
+    });
+  } catch (err) {
+    console.error('[GSI] Failed to initialize Google Sign-In:', err);
+  }
 }
 
 async function handleGoogleCredential(response) {
@@ -56,6 +80,7 @@ async function handleGoogleCredential(response) {
 
     showToast('Signed in with Google!', 'success');
 
+    isRedirecting = true;
     setTimeout(() => {
       if (data.data.user.role === 'faculty') {
         window.location.href = '/faculty';
@@ -68,6 +93,23 @@ async function handleGoogleCredential(response) {
   }
 }
 
+// Helper: poll for the `google` global until it's available, then init.
+function waitForGSIAndInit() {
+  if (isRedirecting) return;
+  if (typeof google !== 'undefined' && google.accounts) {
+    initGoogleSignIn();
+    return;
+  }
+  const poll = setInterval(() => {
+    if (isRedirecting) { clearInterval(poll); return; }
+    if (typeof google !== 'undefined' && google.accounts) {
+      clearInterval(poll);
+      initGoogleSignIn();
+    }
+  }, 200);
+  setTimeout(() => clearInterval(poll), 10000);
+}
+
 // Fetch the Google Client ID from the server and init GSI.
 (async function loadGoogleClientId() {
   try {
@@ -75,11 +117,11 @@ async function handleGoogleCredential(response) {
     const data = await res.json();
     if (data.clientId) {
       window.__GOOGLE_CLIENT_ID__ = data.clientId;
-      // Wait for GSI script to load, then initialize.
-      if (typeof google !== 'undefined') {
-        initGoogleSignIn();
+
+      if (document.readyState === 'complete') {
+        waitForGSIAndInit();
       } else {
-        window.addEventListener('load', initGoogleSignIn);
+        window.addEventListener('load', waitForGSIAndInit);
       }
     }
   } catch (err) {

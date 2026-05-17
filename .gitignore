@@ -1,7 +1,35 @@
+# Dependencies
 node_modules/
+
+# Environment variables (SECRETS - never push!)
 .env
+.env.local
+.env.production
+.env.staging
+
+# Logs
 logs/
 *.log
+npm-debug.log*
+
+# OS generated files
 .DS_Store
 Thumbs.db
-.env.example
+Desktop.ini
+ehthumbs.db
+
+# IDE / Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Generated analysis files
+analysis_results.md
+
+# Package lock (optional — keep if you want reproducible builds)
+# package-lock.json
+
+# Gemini AI tool data
+.gemini/

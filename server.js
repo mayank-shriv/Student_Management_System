@@ -47,15 +47,16 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://accounts.google.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://accounts.google.com", "https://www.gstatic.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      // Allow the primary Google Identity origins used by GSI and related helpers.
-      // Specifying the origin (accounts.google.com and apis.google.com) avoids
-      // relying on a path-specific source which some browsers may not match.
-      scriptSrc: ["'self'", "https://accounts.google.com", "https://apis.google.com", "https://accounts.google.com/gsi/client"],
+      // GSI loads scripts from accounts.google.com and injects inline scripts
+      // for button rendering.  'unsafe-inline' is required for the button to appear.
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com", "https://apis.google.com", "https://www.gstatic.com"],
+      scriptSrcElem: ["'self'", "https://accounts.google.com", "https://apis.google.com", "https://www.gstatic.com"],
       frameSrc: ["https://accounts.google.com"],
       connectSrc: ["'self'", "https://accounts.google.com", "https://apis.google.com"],
-      imgSrc: ["'self'", "data:", "https://lh3.googleusercontent.com"],
+      // Google logo and profile images come from gstatic.com and googleusercontent.com.
+      imgSrc: ["'self'", "data:", "https://lh3.googleusercontent.com", "https://www.gstatic.com", "https://*.googleusercontent.com"],
     },
   },
 }));
