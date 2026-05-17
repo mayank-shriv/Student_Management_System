@@ -72,10 +72,33 @@ function initGoogleSignIn() {
 
 async function handleGoogleCredential(response) {
   try {
+    // Build the request body.  On the register page, include the selected
+    // role (and invite code / enrollment fields) so the backend creates the
+    // account with the correct role.  On the login page, only the credential
+    // is sent — the backend will log in existing users or ask to register.
+    const body = { credential: response.credential };
+
+    const roleSelect = document.getElementById('role');
+    if (roleSelect && roleSelect.value) {
+      body.role = roleSelect.value;
+
+      if (body.role === 'faculty') {
+        const inviteInput = document.getElementById('invite_code');
+        body.invite_code = inviteInput ? inviteInput.value.trim() : '';
+      }
+
+      if (body.role === 'student') {
+        const enrollInput = document.getElementById('enrollment_no');
+        const deptInput = document.getElementById('department');
+        body.enrollment_no = enrollInput ? enrollInput.value.trim() : '';
+        body.department = deptInput ? deptInput.value.trim() : '';
+      }
+    }
+
     const data = await apiRequest('/api/auth/google', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ credential: response.credential }),
+      body: JSON.stringify(body),
     });
 
     showToast('Signed in with Google!', 'success');

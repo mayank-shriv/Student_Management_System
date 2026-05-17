@@ -22,15 +22,18 @@ const verifyGoogleToken = async (idToken) => {
 /**
  * POST /api/auth/google
  *
- * Accepts a Google ID token from the frontend, verifies it, and either
- * logs in the existing user or creates a new student account.
+ * Accepts a Google ID token from the frontend, verifies it, and either:
+ *   - Logs in the existing user (any page), or
+ *   - Creates a new account with the given role (register page only).
  *
- * The sendTokenResponse helper is imported from authController to reuse
- * the same JWT + cookie logic used by normal login/register.
+ * Body: { credential, role?, invite_code?, enrollment_no?, department? }
+ *   - role: 'student' | 'faculty' (required for new user registration)
+ *   - invite_code: required when role is 'faculty'
+ *   - enrollment_no / department: optional student fields
  */
 export const googleLogin = async (req, res, next) => {
   try {
-    const { credential } = req.body;
+    const { credential, role, invite_code, enrollment_no, department } = req.body;
 
     if (!credential) {
       throw new AppError('Google credential token is required.', 400);
@@ -49,7 +52,7 @@ export const googleLogin = async (req, res, next) => {
       throw new AppError('Invalid Google token. Please try again.', 401);
     }
 
-    const { email, name, sub: googleId, picture } = payload;
+    const { email, name, sub: googleId } = payload;
 
     if (!email) {
       throw new AppError('Unable to retrieve email from Google account.', 400);
@@ -59,13 +62,33 @@ export const googleLogin = async (req, res, next) => {
     let user = await User.findOne({ where: { email } });
 
     if (user) {
-      // Link Google ID if not already linked.
+      // Existing user — link Google ID if not already linked, then log in.
       if (!user.google_id) {
         user.google_id = googleId;
         await user.save({ fields: ['google_id'] });
       }
     } else {
-      // Create a new student account — no password required for Google users.
+      // New user — a role must be provided (from the register page).
+      if (!role) {
+        throw new AppError(
+          'No account found with this email. Please register first.',
+          404
+        );
+      }
+
+      if (!['student', 'faculty'].includes(role)) {
+        throw new AppError('Role must be student or faculty.', 400);
+      }
+
+      // Faculty registration requires a valid invite code.
+      if (role === 'faculty') {
+        const expectedCode = process.env.FACULTY_INVITE_CODE;
+        if (!expectedCode || invite_code !== expectedCode) {
+          throw new AppError('Invalid or missing faculty invite code.', 403);
+        }
+      }
+
+      // Create the new user inside a transaction.
       const t = await sequelize.transaction();
       try {
         user = await User.create(
@@ -73,27 +96,32 @@ export const googleLogin = async (req, res, next) => {
             name: name || email.split('@')[0],
             email,
             google_id: googleId,
-            role: 'student',
+            role,
             // Password is null for Google-only accounts.
           },
           { transaction: t }
         );
 
-        // Auto-generate an enrollment number for Google-signup students.
-        const enrollmentNo = `G${Date.now().toString(36).toUpperCase()}`;
-        await Student.create(
-          {
-            user_id: user.id,
-            enrollment_no: enrollmentNo,
-            department: null,
-          },
-          { transaction: t }
-        );
+        // Create a Student profile if the role is student.
+        if (role === 'student') {
+          const enrollNo =
+            enrollment_no || `G${Date.now().toString(36).toUpperCase()}`;
+          await Student.create(
+            {
+              user_id: user.id,
+              enrollment_no: enrollNo,
+              department: department || null,
+            },
+            { transaction: t }
+          );
+        }
 
         await t.commit();
 
         // Invalidate faculty students cache so the new student appears.
-        await delPattern('faculty:students:*');
+        if (role === 'student') {
+          await delPattern('faculty:students:*');
+        }
       } catch (err) {
         await t.rollback();
         throw err;
@@ -128,3 +156,4 @@ export const googleLogin = async (req, res, next) => {
     next(error);
   }
 };
+
