@@ -4,6 +4,7 @@ import { User, Student, sequelize } from '../models/index.js';
 import AppError from '../utils/AppError.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
 import logger from '../config/logger.js';
+import { delCache, delPattern, setCache } from '../config/redis.js';
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
@@ -12,7 +13,7 @@ const REFRESH_TOKEN_EXPIRE = process.env.REFRESH_TOKEN_EXPIRE || '7d';
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET;
 
-const durationToMs = (duration, fallbackMs) => {
+export const durationToMs = (duration, fallbackMs) => {
   const match = /^(\d+)([smhd])$/.exec(duration || '');
   if (!match) return fallbackMs;
 
@@ -44,7 +45,7 @@ const signRefreshToken = (id) => {
   });
 };
 
-const getCookieOptions = (maxAge) => {
+export const getCookieOptions = (maxAge) => {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -65,7 +66,7 @@ const clearAuthCookies = (res) => {
   res.cookie(REFRESH_TOKEN_COOKIE, '', expiredCookieOptions);
 };
 
-const issueTokens = async (user) => {
+export const issueTokens = async (user) => {
   const accessToken = signAccessToken(user.id);
   const refreshToken = signRefreshToken(user.id);
 
@@ -82,6 +83,11 @@ const sendTokenResponse = async (user, statusCode, res) => {
 
   res.cookie(ACCESS_TOKEN_COOKIE, accessToken, getCookieOptions(accessTokenMaxAge));
   res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, getCookieOptions(refreshTokenMaxAge));
+
+  // Refresh the Redis user cache so the auth middleware serves fresh data.
+  const safeUser = user.toJSON();
+  delete safeUser.password;
+  await setCache(`user:${user.id}`, safeUser, 300);
 
   res.status(statusCode).json({
     status: 'success',
@@ -125,6 +131,13 @@ export const register = async (req, res, next) => {
     }
 
     await t.commit();
+
+    // If a student just registered, invalidate the cached faculty students
+    // list so faculty dashboards show the new student immediately.
+    if (role === 'student') {
+      await delPattern('faculty:students:*');
+    }
+
     await sendTokenResponse(user, 201, res);
   } catch (error) {
     await t.rollback();
@@ -139,6 +152,11 @@ export const login = async (req, res, next) => {
     const user = await User.findOne({ where: { email } });
     if (!user) {
       throw new AppError('Invalid email or password.', 401);
+    }
+
+    // Google-only accounts don't have a password — prompt them to use Google.
+    if (!user.password) {
+      throw new AppError('This account uses Google Sign-In. Please use the Google button to log in.', 401);
     }
 
     const isMatch = await user.comparePassword(password);
@@ -203,6 +221,9 @@ export const logout = async (req, res, next) => {
           user.refresh_token = null;
           await user.save({ fields: ['refresh_token'] });
         }
+
+        // Clear cached user so stale session data is never served.
+        await delCache(`user:${decoded.id}`);
       } catch (error) {
         // Invalid or expired refresh token should still allow logout cleanup.
       }
@@ -330,6 +351,9 @@ export const resetPassword = async (req, res, next) => {
     // Also invalidate any existing refresh sessions for security.
     user.refresh_token = null;
     await user.save();
+
+    // Clear cached user so the old password hash is never served.
+    await delCache(`user:${user.id}`);
 
     res.status(200).json({
       status: 'success',

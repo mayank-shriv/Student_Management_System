@@ -6,6 +6,7 @@
   <meta name="description" content="Student Management System — Secure login for Faculty and Students">
   <title>Login — Student Management System</title>
   <link rel="stylesheet" href="/css/style.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
   <div class="auth-container">
@@ -31,8 +32,16 @@
         </button>
       </form>
 
+      <!-- Google Sign-In Divider -->
+      <div class="auth-divider">
+        <span>or</span>
+      </div>
+
+      <!-- Google Sign-In Button -->
+      <div id="google-signin-btn" class="google-btn-wrapper"></div>
+
       <p class="text-center mt-2" style="font-size:0.85rem;">
-        <a href="/forgot-password" style="color:var(--text-secondary); transition:color 0.2s ease;" onmouseover="this.style.color='var(--accent-secondary)'" onmouseout="this.style.color='var(--text-secondary)'">Forgot your password?</a>
+        <a href="/forgot-password" class="link-muted">Forgot your password?</a>
       </p>
 
       <p class="text-center mt-1" style="font-size:0.85rem; color:var(--text-secondary);">

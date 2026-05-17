@@ -113,6 +113,51 @@ a:hover {
   font-size: 0.875rem;
 }
 
+/* ── Auth Divider ("or") ── */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  margin: 1.25rem 0;
+  gap: 0.75rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.auth-divider span {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 500;
+}
+
+/* ── Google Sign-In Button Wrapper ── */
+.google-btn-wrapper {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.google-btn-wrapper > div {
+  width: 100% !important;
+}
+
+/* ── Muted Link (replaces inline event handlers blocked by CSP) ── */
+.link-muted {
+  color: var(--text-secondary);
+  transition: color 0.2s ease;
+}
+
+.link-muted:hover {
+  color: var(--accent);
+}
+
 /* ── Forms ── */
 .form-group {
   margin-bottom: 1.25rem;

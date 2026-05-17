@@ -1,5 +1,7 @@
 import { Attendance, Student, Subject, User } from '../models/index.js';
 import AppError from '../utils/AppError.js';
+import paginate from '../utils/paginate.js';
+import { delCache, delPattern, getCache, setCache } from '../config/redis.js';
 
 export const markAttendance = async (req, res, next) => {
   try {
@@ -14,12 +16,17 @@ export const markAttendance = async (req, res, next) => {
       throw new AppError('You can only mark attendance for your own subjects.', 403);
     }
 
+    // Batch-fetch all referenced students in a single query instead of
+    // hitting the database once per record (eliminates N+1 problem).
+    const studentIds = records.map((r) => r.student_id);
+    const students = await Student.findAll({ where: { id: studentIds } });
+    const studentMap = new Map(students.map((s) => [s.id, s]));
+
     const results = [];
     for (const record of records) {
       const { student_id, status } = record;
 
-      const student = await Student.findByPk(student_id);
-      if (!student) {
+      if (!studentMap.has(student_id)) {
         results.push({ student_id, error: 'Student not found' });
         continue;
       }
@@ -41,6 +48,15 @@ export const markAttendance = async (req, res, next) => {
       });
     }
 
+    // Invalidate caches: dashboard for affected students + attendance list for this subject.
+    const affectedStudents = await Student.findAll({
+      where: { id: studentIds },
+      attributes: ['user_id'],
+    });
+    const invalidations = affectedStudents.map((s) => delCache(`dashboard:${s.user_id}`));
+    invalidations.push(delPattern(`attendance:subject:${subject_id}:*`));
+    await Promise.all(invalidations);
+
     res.status(200).json({
       status: 'success',
       message: `Attendance marked for ${date}`,
@@ -54,6 +70,14 @@ export const markAttendance = async (req, res, next) => {
 export const getAttendanceBySubject = async (req, res, next) => {
   try {
     const { subjectId } = req.params;
+    const { limit, offset, meta } = paginate(req.query);
+
+    // Cache per subject + page to avoid repeating the expensive 3-table JOIN.
+    const cacheKey = `attendance:subject:${subjectId}:page${req.query.page || 1}:limit${limit}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
 
     const subject = await Subject.findByPk(subjectId);
     if (!subject) {
@@ -64,7 +88,7 @@ export const getAttendanceBySubject = async (req, res, next) => {
       throw new AppError('You can only view attendance for your own subjects.', 403);
     }
 
-    const attendance = await Attendance.findAll({
+    const { count, rows } = await Attendance.findAndCountAll({
       where: { subject_id: subjectId },
       include: [
         {
@@ -81,13 +105,21 @@ export const getAttendanceBySubject = async (req, res, next) => {
         },
       ],
       order: [['date', 'DESC']],
+      limit,
+      offset,
     });
 
-    res.status(200).json({
+    const responseData = {
       status: 'success',
-      results: attendance.length,
-      data: { subject: subject.name, attendance },
-    });
+      results: rows.length,
+      data: { subject: subject.name, attendance: rows },
+      pagination: meta(count),
+    };
+
+    // Cache for 2 minutes.
+    await setCache(cacheKey, responseData, 120);
+
+    res.status(200).json(responseData);
   } catch (error) {
     next(error);
   }

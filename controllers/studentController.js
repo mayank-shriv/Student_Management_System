@@ -1,8 +1,20 @@
 import { Student, User, Subject, Attendance, Mark } from '../models/index.js';
 import AppError from '../utils/AppError.js';
+import paginate from '../utils/paginate.js';
+import { getCache, setCache } from '../config/redis.js';
 
+// getDashboard is an aggregation endpoint — it computes summaries across all
+// records so pagination doesn't apply here (it returns computed stats, not
+// a raw list).
 export const getDashboard = async (req, res, next) => {
   try {
+    // Return cached dashboard if available (avoids 3 DB queries + aggregation).
+    const cacheKey = `dashboard:${req.user.id}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
     const student = await Student.findOne({
       where: { user_id: req.user.id },
     });
@@ -11,15 +23,19 @@ export const getDashboard = async (req, res, next) => {
       throw new AppError('Student profile not found.', 404);
     }
 
-    const attendanceRecords = await Attendance.findAll({
-      where: { student_id: student.id },
-      include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
-    });
-
-    const marksRecords = await Mark.findAll({
-      where: { student_id: student.id },
-      include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
-    });
+    // Run both queries concurrently — they are independent and each takes
+    // a full round-trip to the remote DB.  Promise.all cuts total wait time
+    // roughly in half compared to sequential execution.
+    const [attendanceRecords, marksRecords] = await Promise.all([
+      Attendance.findAll({
+        where: { student_id: student.id },
+        include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
+      }),
+      Mark.findAll({
+        where: { student_id: student.id },
+        include: [{ model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] }],
+      }),
+    ]);
 
     const attendanceBySubject = {};
     attendanceRecords.forEach((record) => {
@@ -66,7 +82,7 @@ export const getDashboard = async (req, res, next) => {
     attendanceRecords.forEach((r) => subjectSet.add(r.subject_id));
     marksRecords.forEach((r) => subjectSet.add(r.subject_id));
 
-    res.status(200).json({
+    const responseData = {
       status: 'success',
       data: {
         student: {
@@ -87,7 +103,12 @@ export const getDashboard = async (req, res, next) => {
           marks: m.marks,
         })),
       },
-    });
+    };
+
+    // Cache for 2 minutes.
+    await setCache(cacheKey, responseData, 120);
+
+    res.status(200).json(responseData);
   } catch (error) {
     next(error);
   }
@@ -95,26 +116,41 @@ export const getDashboard = async (req, res, next) => {
 
 export const getMyAttendance = async (req, res, next) => {
   try {
-    const student = await Student.findOne({
-      where: { user_id: req.user.id },
-    });
+    const { limit, offset, meta } = paginate(req.query);
+
+    // Cache the student profile lookup — this same query repeats on every
+    // student endpoint.  We store it for 10 minutes keyed by the auth user.
+    const studentCacheKey = `studentProfile:${req.user.id}`;
+    let student = await getCache(studentCacheKey);
+    if (!student) {
+      student = await Student.findOne({
+        where: { user_id: req.user.id },
+        raw: true,
+      });
+      if (student) {
+        await setCache(studentCacheKey, student, 600);
+      }
+    }
 
     if (!student) {
       throw new AppError('Student profile not found.', 404);
     }
 
-    const attendance = await Attendance.findAll({
+    const { count, rows } = await Attendance.findAndCountAll({
       where: { student_id: student.id },
       include: [
         { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
       ],
       order: [['date', 'DESC']],
+      limit,
+      offset,
     });
 
     res.status(200).json({
       status: 'success',
-      results: attendance.length,
-      data: { attendance },
+      results: rows.length,
+      data: { attendance: rows },
+      pagination: meta(count),
     });
   } catch (error) {
     next(error);
@@ -123,26 +159,39 @@ export const getMyAttendance = async (req, res, next) => {
 
 export const getMyMarks = async (req, res, next) => {
   try {
-    const student = await Student.findOne({
-      where: { user_id: req.user.id },
-    });
+    const { limit, offset, meta } = paginate(req.query);
+
+    const studentCacheKey = `studentProfile:${req.user.id}`;
+    let student = await getCache(studentCacheKey);
+    if (!student) {
+      student = await Student.findOne({
+        where: { user_id: req.user.id },
+        raw: true,
+      });
+      if (student) {
+        await setCache(studentCacheKey, student, 600);
+      }
+    }
 
     if (!student) {
       throw new AppError('Student profile not found.', 404);
     }
 
-    const marks = await Mark.findAll({
+    const { count, rows } = await Mark.findAndCountAll({
       where: { student_id: student.id },
       include: [
         { model: Subject, as: 'subject', attributes: ['id', 'name', 'code'] },
       ],
       order: [['createdAt', 'DESC']],
+      limit,
+      offset,
     });
 
     res.status(200).json({
       status: 'success',
-      results: marks.length,
-      data: { marks },
+      results: rows.length,
+      data: { marks: rows },
+      pagination: meta(count),
     });
   } catch (error) {
     next(error);
@@ -151,41 +200,57 @@ export const getMyMarks = async (req, res, next) => {
 
 export const getMySubjects = async (req, res, next) => {
   try {
-    const student = await Student.findOne({
-      where: { user_id: req.user.id },
-    });
+    const studentCacheKey = `studentProfile:${req.user.id}`;
+    let student = await getCache(studentCacheKey);
+    if (!student) {
+      student = await Student.findOne({
+        where: { user_id: req.user.id },
+        raw: true,
+      });
+      if (student) {
+        await setCache(studentCacheKey, student, 600);
+      }
+    }
 
     if (!student) {
       throw new AppError('Student profile not found.', 404);
     }
 
-    const subjectIds = new Set();
-    const attendanceRecords = await Attendance.findAll({
-      where: { student_id: student.id },
-      attributes: ['subject_id'],
-      group: ['subject_id'],
-    });
-    const marksRecords = await Mark.findAll({
-      where: { student_id: student.id },
-      attributes: ['subject_id'],
-      group: ['subject_id'],
-    });
+    // Run both subject-ID lookups concurrently.
+    const [attendanceRecords, marksRecords] = await Promise.all([
+      Attendance.findAll({
+        where: { student_id: student.id },
+        attributes: ['subject_id'],
+        group: ['subject_id'],
+      }),
+      Mark.findAll({
+        where: { student_id: student.id },
+        attributes: ['subject_id'],
+        group: ['subject_id'],
+      }),
+    ]);
 
+    const subjectIds = new Set();
     attendanceRecords.forEach((r) => subjectIds.add(r.subject_id));
     marksRecords.forEach((r) => subjectIds.add(r.subject_id));
 
-    const subjects = await Subject.findAll({
+    const { limit, offset, meta } = paginate(req.query);
+
+    const { count, rows } = await Subject.findAndCountAll({
       where: { id: Array.from(subjectIds) },
       include: [
         { model: User, as: 'faculty', attributes: ['name'] },
       ],
       order: [['name', 'ASC']],
+      limit,
+      offset,
     });
 
     res.status(200).json({
       status: 'success',
-      results: subjects.length,
-      data: { subjects },
+      results: rows.length,
+      data: { subjects: rows },
+      pagination: meta(count),
     });
   } catch (error) {
     next(error);

@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../models/index.js';
 import AppError from '../utils/AppError.js';
+import { getCache, setCache } from '../config/redis.js';
+
+const USER_CACHE_TTL = 300; // 5 minutes
 
 const auth = async (req, res, next) => {
   try {
@@ -12,12 +15,26 @@ const auth = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET);
 
-    const user = await User.findByPk(decoded.id, {
-      attributes: { exclude: ['password'] },
-    });
+    // Try Redis cache first to avoid a database round-trip on every request.
+    const cacheKey = `user:${decoded.id}`;
+    let userData = await getCache(cacheKey);
 
-    if (!user) {
-      throw new AppError('User no longer exists.', 401);
+    let user;
+    if (userData) {
+      // Rebuild a lightweight User-like object from cache.  We attach the
+      // real model's helper methods so downstream code works unchanged.
+      user = User.build(userData, { isNewRecord: false });
+    } else {
+      user = await User.findByPk(decoded.id, {
+        attributes: { exclude: ['password'] },
+      });
+
+      if (!user) {
+        throw new AppError('User no longer exists.', 401);
+      }
+
+      // Cache the user (excluding password) for subsequent requests.
+      await setCache(cacheKey, user.toJSON(), USER_CACHE_TTL);
     }
 
     req.user = user;

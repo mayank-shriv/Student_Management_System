@@ -24,6 +24,69 @@ if (authRedirectPaths.includes(window.location.pathname)) {
   checkAuth();
 }
 
+// ── Google Sign-In ──
+// Initialize Google Identity Services when the GSI script has loaded.
+function initGoogleSignIn() {
+  const googleBtnContainer = document.getElementById('google-signin-btn');
+  if (!googleBtnContainer || typeof google === 'undefined') return;
+
+  google.accounts.id.initialize({
+    client_id: window.__GOOGLE_CLIENT_ID__,
+    callback: handleGoogleCredential,
+  });
+
+  google.accounts.id.renderButton(googleBtnContainer, {
+    type: 'standard',
+    theme: 'filled_black',
+    size: 'large',
+    width: '100%',
+    text: 'signin_with',
+    shape: 'rectangular',
+    logo_alignment: 'center',
+  });
+}
+
+async function handleGoogleCredential(response) {
+  try {
+    const data = await apiRequest('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ credential: response.credential }),
+    });
+
+    showToast('Signed in with Google!', 'success');
+
+    setTimeout(() => {
+      if (data.data.user.role === 'faculty') {
+        window.location.href = '/faculty';
+      } else {
+        window.location.href = '/student';
+      }
+    }, 500);
+  } catch (error) {
+    showAlert(error.message);
+  }
+}
+
+// Fetch the Google Client ID from the server and init GSI.
+(async function loadGoogleClientId() {
+  try {
+    const res = await fetch('/api/auth/google-client-id');
+    const data = await res.json();
+    if (data.clientId) {
+      window.__GOOGLE_CLIENT_ID__ = data.clientId;
+      // Wait for GSI script to load, then initialize.
+      if (typeof google !== 'undefined') {
+        initGoogleSignIn();
+      } else {
+        window.addEventListener('load', initGoogleSignIn);
+      }
+    }
+  } catch (err) {
+    // Google sign-in not available, that's ok.
+  }
+})();
+
 const roleSelect = document.getElementById('role');
 if (roleSelect) {
   roleSelect.addEventListener('change', () => {

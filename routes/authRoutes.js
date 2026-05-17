@@ -1,11 +1,26 @@
 import express from 'express';
 import { body } from 'express-validator';
 import * as authController from '../controllers/authController.js';
+import { googleLogin } from '../controllers/googleAuth.js';
 import validate from '../middleware/validate.js';
 import rateLimit from 'express-rate-limit';
+import { RedisStore } from 'rate-limit-redis';
+import { getRedisClient, isRedisReady } from '../config/redis.js';
 import auth from '../middleware/auth.js';
 
 const router = express.Router();
+
+// Helper: build a RedisStore only when the connection is healthy, otherwise
+// fall back to the built-in in-memory store so the app works without Redis.
+const buildRedisStore = () => {
+  try {
+    return new RedisStore({
+      sendCommand: (...args) => getRedisClient().call(...args),
+    });
+  } catch {
+    return undefined; // falls back to in-memory
+  }
+};
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -16,6 +31,7 @@ const loginLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  ...(isRedisReady() && { store: buildRedisStore() }),
 });
 
 router.post(
@@ -68,6 +84,7 @@ const forgotPasswordLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  ...(isRedisReady() && { store: buildRedisStore() }),
 });
 
 router.post(
@@ -101,5 +118,14 @@ router.post('/refresh', authController.refresh);
 router.post('/logout', authController.logout);
 
 router.get('/me', auth, authController.getMe);
+
+// Google OAuth — receives the ID token from the frontend GSI callback.
+router.post('/google', googleLogin);
+
+// Expose the Google Client ID so the frontend can initialize GSI
+// without hardcoding the ID in client-side JavaScript.
+router.get('/google-client-id', (req, res) => {
+  res.json({ clientId: process.env.GOOGLE_CLIENT_ID || null });
+});
 
 export default router;

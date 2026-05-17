@@ -26,13 +26,18 @@ const User = sequelize.define('User', {
   },
   password: {
     type: DataTypes.STRING(255),
-    allowNull: false,
+    allowNull: true,
     validate: {
       // This validates the plaintext password length before the beforeCreate/
       // beforeUpdate hooks hash it.  Do NOT assign a pre-hashed value directly
       // to user.password — the validation would pass incorrectly.
       len: { args: [6, 255], msg: 'Password must be at least 6 characters' },
     },
+  },
+  google_id: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+    unique: true,
   },
   refresh_token: {
     type: DataTypes.STRING(255),
@@ -56,6 +61,7 @@ const User = sequelize.define('User', {
   timestamps: true,
   indexes: [
     { unique: true, fields: ['email'] },
+    { unique: true, fields: ['google_id'] },
   ],
   hooks: {
     beforeCreate: async (user) => {

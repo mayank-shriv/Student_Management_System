@@ -7,6 +7,8 @@ import auth from '../middleware/auth.js';
 import role from '../middleware/role.js';
 import validate from '../middleware/validate.js';
 import { Student, User } from '../models/index.js';
+import paginate from '../utils/paginate.js';
+import { getCache, setCache } from '../config/redis.js';
 
 const router = express.Router();
 
@@ -15,7 +17,16 @@ router.use(role('faculty'));
 
 router.get('/students', async (req, res, next) => {
   try {
-    const students = await Student.findAll({
+    const { limit, offset, meta } = paginate(req.query);
+
+    // Cache the students list for 5 minutes — student records rarely change.
+    const cacheKey = `faculty:students:page${req.query.page || 1}:limit${limit}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.status(200).json(cached);
+    }
+
+    const { count, rows } = await Student.findAndCountAll({
       include: [
         {
           model: User,
@@ -24,13 +35,20 @@ router.get('/students', async (req, res, next) => {
         },
       ],
       order: [[{ model: User, as: 'user' }, 'name', 'ASC']],
+      limit,
+      offset,
     });
 
-    res.status(200).json({
+    const responseData = {
       status: 'success',
-      results: students.length,
-      data: { students },
-    });
+      results: rows.length,
+      data: { students: rows },
+      pagination: meta(count),
+    };
+
+    await setCache(cacheKey, responseData, 300);
+
+    res.status(200).json(responseData);
   } catch (error) {
     next(error);
   }
