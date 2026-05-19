@@ -1,6 +1,3 @@
-// ── Forgot Password Page Logic ──
-// Depends on common.js being loaded first.
-
 const forgotForm = document.getElementById('forgot-password-form');
 
 if (forgotForm) {
@@ -21,15 +18,12 @@ if (forgotForm) {
         }),
       });
 
-      // Switch to success view.
       document.getElementById('step-email').classList.add('hidden');
       document.getElementById('step-success').classList.remove('hidden');
 
       if (data.emailSent) {
-        // Email was actually sent — show the "check your inbox" message.
         showToast('Reset link sent to your email!', 'success');
       } else if (data.resetToken) {
-        // SMTP not configured — show the token directly (dev fallback).
         const subtitle = document.getElementById('success-subtitle');
         if (subtitle) {
           subtitle.textContent = 'SMTP is not configured. Here is your reset token for development:';
@@ -45,7 +39,6 @@ if (forgotForm) {
 
         showToast('Reset token generated (dev mode)', 'success');
       } else {
-        // Generic success (no email sent, no token — user may not exist).
         showToast('If that email exists, a reset link has been sent.', 'success');
       }
     } catch (error) {
@@ -57,7 +50,6 @@ if (forgotForm) {
   });
 }
 
-// Copy token to clipboard.
 const copyBtn = document.getElementById('copy-token-btn');
 if (copyBtn) {
   copyBtn.addEventListener('click', () => {

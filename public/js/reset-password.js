@@ -1,7 +1,4 @@
-// ── Reset Password Page Logic ──
-
 (function () {
-  // Extract the token from the URL query string.
   const urlParams = new URLSearchParams(window.location.search);
   const token = urlParams.get('token');
 
@@ -9,14 +6,12 @@
   const stepSuccess = document.getElementById('step-success');
   const stepError = document.getElementById('step-error');
 
-  // If no token is present, show the error state.
   if (!token) {
     stepReset.classList.add('hidden');
     stepError.classList.remove('hidden');
     return;
   }
 
-  // Password strength meter.
   const passwordInput = document.getElementById('password');
   const strengthFill = document.getElementById('strength-fill');
   const strengthText = document.getElementById('strength-text');
@@ -52,7 +47,6 @@
     });
   }
 
-  // Handle form submission.
   const resetForm = document.getElementById('reset-password-form');
 
   if (resetForm) {
@@ -89,7 +83,6 @@
           body: JSON.stringify({ token, password }),
         });
 
-        // Switch to success view.
         stepReset.classList.add('hidden');
         stepSuccess.classList.remove('hidden');
 

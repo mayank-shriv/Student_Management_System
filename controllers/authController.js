@@ -4,7 +4,6 @@ import { User, Student, sequelize } from '../models/index.js';
 import AppError from '../utils/AppError.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
 import logger from '../config/logger.js';
-import { delCache, delPattern, setCache } from '../config/redis.js';
 
 const ACCESS_TOKEN_COOKIE = 'access_token';
 const REFRESH_TOKEN_COOKIE = 'refresh_token';
@@ -84,11 +83,6 @@ const sendTokenResponse = async (user, statusCode, res) => {
   res.cookie(ACCESS_TOKEN_COOKIE, accessToken, getCookieOptions(accessTokenMaxAge));
   res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, getCookieOptions(refreshTokenMaxAge));
 
-  // Refresh the Redis user cache so the auth middleware serves fresh data.
-  const safeUser = user.toJSON();
-  delete safeUser.password;
-  await setCache(`user:${user.id}`, safeUser, 300);
-
   res.status(statusCode).json({
     status: 'success',
     data: {
@@ -102,8 +96,6 @@ export const register = async (req, res, next) => {
   try {
     const { name, email, password, role, enrollment_no, department, invite_code } = req.body;
 
-    // Faculty registration requires a valid invite code to prevent
-    // unauthorized privilege escalation.
     if (role === 'faculty') {
       const expectedCode = process.env.FACULTY_INVITE_CODE;
       if (!expectedCode || invite_code !== expectedCode) {
@@ -132,12 +124,6 @@ export const register = async (req, res, next) => {
 
     await t.commit();
 
-    // If a student just registered, invalidate the cached faculty students
-    // list so faculty dashboards show the new student immediately.
-    if (role === 'student') {
-      await delPattern('faculty:students:*');
-    }
-
     await sendTokenResponse(user, 201, res);
   } catch (error) {
     await t.rollback();
@@ -154,7 +140,6 @@ export const login = async (req, res, next) => {
       throw new AppError('Invalid email or password.', 401);
     }
 
-    // Google-only accounts don't have a password — prompt them to use Google.
     if (!user.password) {
       throw new AppError('This account uses Google Sign-In. Please use the Google button to log in.', 401);
     }
@@ -221,11 +206,7 @@ export const logout = async (req, res, next) => {
           user.refresh_token = null;
           await user.save({ fields: ['refresh_token'] });
         }
-
-        // Clear cached user so stale session data is never served.
-        await delCache(`user:${decoded.id}`);
       } catch (error) {
-        // Invalid or expired refresh token should still allow logout cleanup.
       }
     }
 
@@ -269,19 +250,17 @@ export const forgotPassword = async (req, res, next) => {
     const user = await User.findOne({ where: { email } });
 
     if (!user) {
-      // Return success even if user not found to prevent email enumeration.
       return res.status(200).json({
         status: 'success',
         message: 'If an account with that email exists, a reset token has been generated.',
       });
     }
 
-    // Generate a cryptographically random reset token.
     const resetToken = crypto.randomBytes(32).toString('hex');
     const hashedToken = hashToken(resetToken);
 
     user.reset_token = hashedToken;
-    user.reset_token_expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    user.reset_token_expires = new Date(Date.now() + 60 * 60 * 1000);
     await user.save({ fields: ['reset_token', 'reset_token_expires'] });
 
     const response = {
@@ -289,22 +268,17 @@ export const forgotPassword = async (req, res, next) => {
       message: 'If an account with that email exists, a password reset link has been sent.',
     };
 
-    // Try to send the reset email.  If SMTP is not configured, fall back
-    // to returning the token in the response so dev/testing still works.
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
       try {
         await sendPasswordResetEmail(user.email, resetToken);
         response.emailSent = true;
       } catch (emailError) {
         logger.error('Failed to send reset email, falling back to token response:', emailError.message);
-        // Fall through — token will be included below if in dev mode.
       }
     } else {
       logger.warn('SMTP not configured — returning reset token in response (dev mode).');
     }
 
-    // In development (or when email fails), also return the token so the
-    // flow can still be tested without a mail server.
     if (process.env.NODE_ENV !== 'production' && !response.emailSent) {
       response.resetToken = resetToken;
       response.resetUrl = `/reset-password?token=${resetToken}`;
@@ -337,23 +311,17 @@ export const resetPassword = async (req, res, next) => {
     }
 
     if (!user.reset_token_expires || user.reset_token_expires < new Date()) {
-      // Clear the expired token.
       user.reset_token = null;
       user.reset_token_expires = null;
       await user.save({ fields: ['reset_token', 'reset_token_expires'] });
       throw new AppError('Reset token has expired. Please request a new one.', 400);
     }
 
-    // Update the password and clear the reset token.
     user.password = password;
     user.reset_token = null;
     user.reset_token_expires = null;
-    // Also invalidate any existing refresh sessions for security.
     user.refresh_token = null;
     await user.save();
-
-    // Clear cached user so the old password hash is never served.
-    await delCache(`user:${user.id}`);
 
     res.status(200).json({
       status: 'success',

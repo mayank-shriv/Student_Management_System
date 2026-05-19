@@ -1,20 +1,9 @@
 import { Student, User, Subject, Attendance, Mark } from '../models/index.js';
 import AppError from '../utils/AppError.js';
 import paginate from '../utils/paginate.js';
-import { getCache, setCache } from '../config/redis.js';
 
-// getDashboard is an aggregation endpoint — it computes summaries across all
-// records so pagination doesn't apply here (it returns computed stats, not
-// a raw list).
 export const getDashboard = async (req, res, next) => {
   try {
-    // Return cached dashboard if available (avoids 3 DB queries + aggregation).
-    const cacheKey = `dashboard:${req.user.id}`;
-    const cached = await getCache(cacheKey);
-    if (cached) {
-      return res.status(200).json(cached);
-    }
-
     const student = await Student.findOne({
       where: { user_id: req.user.id },
     });
@@ -23,9 +12,6 @@ export const getDashboard = async (req, res, next) => {
       throw new AppError('Student profile not found.', 404);
     }
 
-    // Run both queries concurrently — they are independent and each takes
-    // a full round-trip to the remote DB.  Promise.all cuts total wait time
-    // roughly in half compared to sequential execution.
     const [attendanceRecords, marksRecords] = await Promise.all([
       Attendance.findAll({
         where: { student_id: student.id },
@@ -82,7 +68,7 @@ export const getDashboard = async (req, res, next) => {
     attendanceRecords.forEach((r) => subjectSet.add(r.subject_id));
     marksRecords.forEach((r) => subjectSet.add(r.subject_id));
 
-    const responseData = {
+    res.status(200).json({
       status: 'success',
       data: {
         student: {
@@ -103,12 +89,7 @@ export const getDashboard = async (req, res, next) => {
           marks: m.marks,
         })),
       },
-    };
-
-    // Cache for 2 minutes.
-    await setCache(cacheKey, responseData, 120);
-
-    res.status(200).json(responseData);
+    });
   } catch (error) {
     next(error);
   }
@@ -118,19 +99,10 @@ export const getMyAttendance = async (req, res, next) => {
   try {
     const { limit, offset, meta } = paginate(req.query);
 
-    // Cache the student profile lookup — this same query repeats on every
-    // student endpoint.  We store it for 10 minutes keyed by the auth user.
-    const studentCacheKey = `studentProfile:${req.user.id}`;
-    let student = await getCache(studentCacheKey);
-    if (!student) {
-      student = await Student.findOne({
-        where: { user_id: req.user.id },
-        raw: true,
-      });
-      if (student) {
-        await setCache(studentCacheKey, student, 600);
-      }
-    }
+    const student = await Student.findOne({
+      where: { user_id: req.user.id },
+      raw: true,
+    });
 
     if (!student) {
       throw new AppError('Student profile not found.', 404);
@@ -161,17 +133,10 @@ export const getMyMarks = async (req, res, next) => {
   try {
     const { limit, offset, meta } = paginate(req.query);
 
-    const studentCacheKey = `studentProfile:${req.user.id}`;
-    let student = await getCache(studentCacheKey);
-    if (!student) {
-      student = await Student.findOne({
-        where: { user_id: req.user.id },
-        raw: true,
-      });
-      if (student) {
-        await setCache(studentCacheKey, student, 600);
-      }
-    }
+    const student = await Student.findOne({
+      where: { user_id: req.user.id },
+      raw: true,
+    });
 
     if (!student) {
       throw new AppError('Student profile not found.', 404);
@@ -200,23 +165,15 @@ export const getMyMarks = async (req, res, next) => {
 
 export const getMySubjects = async (req, res, next) => {
   try {
-    const studentCacheKey = `studentProfile:${req.user.id}`;
-    let student = await getCache(studentCacheKey);
-    if (!student) {
-      student = await Student.findOne({
-        where: { user_id: req.user.id },
-        raw: true,
-      });
-      if (student) {
-        await setCache(studentCacheKey, student, 600);
-      }
-    }
+    const student = await Student.findOne({
+      where: { user_id: req.user.id },
+      raw: true,
+    });
 
     if (!student) {
       throw new AppError('Student profile not found.', 404);
     }
 
-    // Run both subject-ID lookups concurrently.
     const [attendanceRecords, marksRecords] = await Promise.all([
       Attendance.findAll({
         where: { student_id: student.id },

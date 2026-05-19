@@ -1,6 +1,5 @@
 import { Subject, User } from '../models/index.js';
 import AppError from '../utils/AppError.js';
-import { getCache, setCache, delCache } from '../config/redis.js';
 
 export const createSubject = async (req, res, next) => {
   try {
@@ -11,9 +10,6 @@ export const createSubject = async (req, res, next) => {
       code: code.toUpperCase(),
       faculty_id: req.user.id,
     });
-
-    // Invalidate the faculty's cached subject list so it includes the new one.
-    await delCache(`subjects:faculty:${req.user.id}`);
 
     res.status(201).json({
       status: 'success',
@@ -26,13 +22,6 @@ export const createSubject = async (req, res, next) => {
 
 export const getAllSubjects = async (req, res, next) => {
   try {
-    // Cache the subject list per faculty for 5 minutes — it rarely changes.
-    const cacheKey = `subjects:faculty:${req.user.id}`;
-    const cached = await getCache(cacheKey);
-    if (cached) {
-      return res.status(200).json(cached);
-    }
-
     const subjects = await Subject.findAll({
       include: [
         {
@@ -44,15 +33,11 @@ export const getAllSubjects = async (req, res, next) => {
       order: [['name', 'ASC']],
     });
 
-    const responseData = {
+    res.status(200).json({
       status: 'success',
       results: subjects.length,
       data: { subjects },
-    };
-
-    await setCache(cacheKey, responseData, 300);
-
-    res.status(200).json(responseData);
+    });
   } catch (error) {
     next(error);
   }
@@ -71,9 +56,6 @@ export const deleteSubject = async (req, res, next) => {
     }
 
     await subject.destroy();
-
-    // Invalidate the faculty's cached subject list.
-    await delCache(`subjects:faculty:${req.user.id}`);
 
     res.status(200).json({
       status: 'success',

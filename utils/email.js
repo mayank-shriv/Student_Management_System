@@ -1,28 +1,16 @@
 import nodemailer from 'nodemailer';
 import logger from '../config/logger.js';
 
-// Build the SMTP transporter from environment variables.
-// For Gmail: set SMTP_HOST=smtp.gmail.com, SMTP_PORT=587, and use an
-// App Password (not your regular password) for SMTP_PASS.
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT, 10) || 587,
-  secure: process.env.SMTP_SECURE === 'true', // true for 465, false for 587
+  secure: process.env.SMTP_SECURE === 'true',
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
 });
 
-/**
- * Send an email.
- *
- * @param {Object} options
- * @param {string} options.to        – recipient email address
- * @param {string} options.subject   – email subject line
- * @param {string} options.text      – plain-text body
- * @param {string} [options.html]    – optional HTML body
- */
 export const sendEmail = async ({ to, subject, text, html }) => {
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
 
@@ -38,12 +26,6 @@ export const sendEmail = async ({ to, subject, text, html }) => {
   }
 };
 
-/**
- * Send a password-reset email containing the reset link.
- *
- * @param {string} email      – recipient address
- * @param {string} resetToken – the unhashed reset token
- */
 export const sendPasswordResetEmail = async (email, resetToken) => {
   const baseUrl = process.env.APP_URL || `http://localhost:${process.env.PORT || 5000}`;
   const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;

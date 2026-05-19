@@ -1,8 +1,3 @@
-// ── Shared Utilities ──
-// Common functions used across all frontend pages to avoid duplication.
-
-// Escapes HTML entities in a string to prevent XSS when inserting
-// user-controlled data into the DOM via innerHTML.
 function escapeHtml(str) {
   if (str == null) return '';
   const div = document.createElement('div');

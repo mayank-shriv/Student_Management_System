@@ -1,6 +1,3 @@
-// ── Student Dashboard Logic ──
-// Depends on common.js being loaded first.
-
 let currentUser = null;
 
 function getGrade(marks) {

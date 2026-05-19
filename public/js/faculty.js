@@ -1,6 +1,3 @@
-// ── Faculty Dashboard Logic ──
-// Depends on common.js being loaded first.
-
 let currentUser = null;
 let allStudents = [];
 let allSubjects = [];
@@ -438,8 +435,6 @@ document.querySelectorAll('.modal-overlay').forEach((overlay) => {
   });
 });
 
-// Event delegation for dynamically created buttons (replaces inline onclick
-// handlers that would conflict with the Content Security Policy).
 document.addEventListener('click', (e) => {
   const deleteBtn = e.target.closest('.delete-subject-btn');
   if (deleteBtn) {

@@ -1,13 +1,5 @@
-// ── Auth Page Logic (Login & Register) ──
-// Depends on common.js being loaded first.
-
-// Only run the auto-redirect on login-related pages; skip password reset
-// pages so an authenticated user can still use the reset flow (Fix #10).
 const authRedirectPaths = ['/', '/login', '/register'];
 
-// Flag set to true when a redirect is about to happen.  GSI initialization
-// checks this to avoid creating iframes on a page that's about to unload
-// (which would cause the "postMessage on null" error).
 let isRedirecting = false;
 
 async function checkAuth() {
@@ -22,7 +14,6 @@ async function checkAuth() {
       window.location.href = '/student';
     }
   } catch (error) {
-    // Not logged in, stay on page — now safe to init GSI.
   }
 }
 
@@ -30,25 +21,13 @@ if (authRedirectPaths.includes(window.location.pathname)) {
   checkAuth();
 }
 
-// ── Google Sign-In ──
-// Initialize Google Identity Services when the GSI script has loaded.
 function initGoogleSignIn() {
-  // Don't init GSI if the page is about to redirect (causes postMessage error).
   if (isRedirecting) return;
 
   const googleBtnContainer = document.getElementById('google-signin-btn');
-  if (!googleBtnContainer) {
-    console.warn('[GSI] No #google-signin-btn container found on page.');
-    return;
-  }
-  if (typeof google === 'undefined' || !google.accounts) {
-    console.warn('[GSI] Google Identity Services library not loaded.');
-    return;
-  }
-  if (!window.__GOOGLE_CLIENT_ID__) {
-    console.warn('[GSI] No Google Client ID available.');
-    return;
-  }
+  if (!googleBtnContainer) return;
+  if (typeof google === 'undefined' || !google.accounts) return;
+  if (!window.__GOOGLE_CLIENT_ID__) return;
 
   try {
     google.accounts.id.initialize({
@@ -72,10 +51,6 @@ function initGoogleSignIn() {
 
 async function handleGoogleCredential(response) {
   try {
-    // Build the request body.  On the register page, include the selected
-    // role (and invite code / enrollment fields) so the backend creates the
-    // account with the correct role.  On the login page, only the credential
-    // is sent — the backend will log in existing users or ask to register.
     const body = { credential: response.credential };
 
     const roleSelect = document.getElementById('role');
@@ -116,7 +91,6 @@ async function handleGoogleCredential(response) {
   }
 }
 
-// Helper: poll for the `google` global until it's available, then init.
 function waitForGSIAndInit() {
   if (isRedirecting) return;
   if (typeof google !== 'undefined' && google.accounts) {
@@ -133,7 +107,6 @@ function waitForGSIAndInit() {
   setTimeout(() => clearInterval(poll), 10000);
 }
 
-// Fetch the Google Client ID from the server and init GSI.
 (async function loadGoogleClientId() {
   try {
     const res = await fetch('/api/auth/google-client-id');
@@ -148,7 +121,6 @@ function waitForGSIAndInit() {
       }
     }
   } catch (err) {
-    // Google sign-in not available, that's ok.
   }
 })();
 

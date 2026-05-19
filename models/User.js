@@ -28,9 +28,6 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(255),
     allowNull: true,
     validate: {
-      // Custom validator that skips length checks when password is null
-      // (Google-only accounts have no password).  Do NOT assign a pre-hashed
-      // value directly — the validation would pass incorrectly.
       passwordLength(value) {
         if (value !== null && value !== undefined && value.length < 6) {
           throw new Error('Password must be at least 6 characters');
@@ -82,7 +79,6 @@ const User = sequelize.define('User', {
 });
 
 User.prototype.comparePassword = async function (candidatePassword) {
-  // Google-only accounts have no password — always return false.
   if (!this.password) return false;
   return bcrypt.compare(candidatePassword, this.password);
 };
