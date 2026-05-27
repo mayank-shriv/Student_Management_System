@@ -136,8 +136,26 @@ const startServer = async () => {
     logger.info('✅ MySQL connected successfully');
 
     const isDev = process.env.NODE_ENV !== 'production';
-    await sequelize.sync(isDev ? { alter: true } : undefined);
-    logger.info('✅ Database models synced');
+    try {
+      await sequelize.sync(isDev ? { alter: true } : undefined);
+      logger.info('✅ Database models synced');
+    } catch (syncError) {
+      // Print to console so nodemon shows full details
+      console.error('Sequelize sync error:', syncError);
+      if (syncError && syncError.stack) console.error(syncError.stack);
+      // Log with winston (stringify nested properties)
+      logger.error('❌ Sequelize sync failed: ' + (syncError && syncError.message ? syncError.message : String(syncError)));
+      try {
+        const details = {
+          sql: syncError.sql || null,
+          parent: syncError.parent ? { name: syncError.parent.name, message: syncError.parent.message } : null,
+        };
+        logger.error('Sync error details: ' + JSON.stringify(details));
+      } catch (e) {
+        logger.error('Failed to stringify syncError details');
+      }
+      throw syncError;
+    }
 
     const server = app.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);

@@ -38,7 +38,8 @@ const User = sequelize.define('User', {
   google_id: {
     type: DataTypes.STRING(255),
     allowNull: true,
-    unique: true,
+    // Remove unique constraint to avoid exceeding MySQL's max key limit during sync
+    unique: false,
   },
   refresh_token: {
     type: DataTypes.STRING(255),
@@ -62,7 +63,6 @@ const User = sequelize.define('User', {
   timestamps: true,
   indexes: [
     { unique: true, fields: ['email'] },
-    { unique: true, fields: ['google_id'] },
   ],
   hooks: {
     beforeCreate: async (user) => {
