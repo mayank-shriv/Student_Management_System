@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import 'dotenv/config';
 import { sequelize } from '../models/index.js';
 
 async function dropGoogleIdIndex() {
