@@ -1,5 +1,6 @@
 import { Subject, User } from '../models/index.js';
 import AppError from '../utils/AppError.js';
+import { invalidateCache } from '../middleware/cache.js';
 
 export const createSubject = async (req, res, next) => {
   try {
@@ -10,6 +11,8 @@ export const createSubject = async (req, res, next) => {
       code: code.toUpperCase(),
       faculty_id: req.user.id,
     });
+
+    await invalidateCache('subjects:*');
 
     res.status(201).json({
       status: 'success',
@@ -56,6 +59,8 @@ export const deleteSubject = async (req, res, next) => {
     }
 
     await subject.destroy();
+
+    await invalidateCache('subjects:*');
 
     res.status(200).json({
       status: 'success',

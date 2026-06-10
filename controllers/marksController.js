@@ -1,6 +1,7 @@
 import { Mark, Student, Subject, User } from '../models/index.js';
 import AppError from '../utils/AppError.js';
 import paginate from '../utils/paginate.js';
+import { invalidateCache } from '../middleware/cache.js';
 
 export const addMarks = async (req, res, next) => {
   try {
@@ -46,6 +47,10 @@ export const addMarks = async (req, res, next) => {
       results.push({ student_id, marks: mark.marks, action: 'created' });
     }
 
+    await invalidateCache('marks:*');
+    await invalidateCache('student:dashboard:*');
+    await invalidateCache('student:marks:*');
+
     res.status(201).json({
       status: 'success',
       data: { results },
@@ -71,6 +76,10 @@ export const updateMarks = async (req, res, next) => {
 
     mark.marks = marks;
     await mark.save();
+
+    await invalidateCache('marks:*');
+    await invalidateCache('student:dashboard:*');
+    await invalidateCache('student:marks:*');
 
     res.status(200).json({
       status: 'success',

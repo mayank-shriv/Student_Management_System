@@ -65,7 +65,14 @@ async function handleGoogleCredential(response) {
       if (body.role === 'student') {
         const enrollInput = document.getElementById('enrollment_no');
         const deptInput = document.getElementById('department');
-        body.enrollment_no = enrollInput ? enrollInput.value.trim() : '';
+        const enrollValue = enrollInput ? enrollInput.value.trim() : '';
+
+        if (!enrollValue) {
+          showAlert('Please enter your enrollment number before signing up with Google.');
+          return;
+        }
+
+        body.enrollment_no = enrollValue;
         body.department = deptInput ? deptInput.value.trim() : '';
       }
     }
@@ -87,7 +94,16 @@ async function handleGoogleCredential(response) {
       }
     }, 500);
   } catch (error) {
-    showAlert(error.message);
+    const msg = error.message || '';
+    // If user doesn't exist yet, redirect to register page
+    if (msg.includes('register') || msg.includes('Enrollment number is required')) {
+      showToast('Please register first to create your account.', 'warning');
+      setTimeout(() => {
+        window.location.href = '/register';
+      }, 1500);
+      return;
+    }
+    showAlert(msg);
   }
 }
 

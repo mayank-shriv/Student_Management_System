@@ -71,9 +71,11 @@ export const googleLogin = async (req, res, next) => {
         );
 
         if (role === 'student') {
-          const enrollNo = enrollment_no || `G${Date.now().toString(36).toUpperCase()}`;
+          if (!enrollment_no) {
+            throw new AppError('Enrollment number is required for students.', 400);
+          }
           await Student.create(
-            { user_id: user.id, enrollment_no: enrollNo, department: department || null },
+            { user_id: user.id, enrollment_no: enrollment_no, department: department || null },
             { transaction: t }
           );
         }

@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 
 import logger from './config/logger.js';
 import { sequelize } from './models/index.js';
+import { redis, connectRedis, isRedisReady } from './config/redis.js';
 import errorHandler from './middleware/errorHandler.js';
 
 import authRoutes from './routes/authRoutes.js';
@@ -41,12 +42,15 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://accounts.google.com", "https://www.gstatic.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com", "https://apis.google.com", "https://www.gstatic.com"],
-      scriptSrcElem: ["'self'", "https://accounts.google.com", "https://apis.google.com", "https://www.gstatic.com"],
+      scriptSrcElem: ["'self'", "'unsafe-inline'", "https://accounts.google.com", "https://apis.google.com", "https://www.gstatic.com"],
       frameSrc: ["https://accounts.google.com"],
       connectSrc: ["'self'", "https://accounts.google.com", "https://apis.google.com"],
       imgSrc: ["'self'", "data:", "https://lh3.googleusercontent.com", "https://www.gstatic.com", "https://*.googleusercontent.com"],
+      objectSrc: ["'none'"],
+      childSrc: ["https://accounts.google.com"],
     },
   },
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
 }));
 
 app.use(cors({
@@ -87,6 +91,7 @@ app.get('/api/health', async (req, res) => {
         heapUsed: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB`,
       },
       database: 'connected',
+      redis: isRedisReady() ? 'connected' : 'disconnected',
       environment: process.env.NODE_ENV || 'development',
       timestamp: new Date().toISOString(),
     });
@@ -95,6 +100,7 @@ app.get('/api/health', async (req, res) => {
     res.status(503).json({
       status: 'unhealthy',
       database: 'disconnected',
+      redis: isRedisReady() ? 'connected' : 'disconnected',
       timestamp: new Date().toISOString(),
     });
   }
@@ -135,9 +141,30 @@ const startServer = async () => {
     await sequelize.authenticate();
     logger.info('✅ MySQL connected successfully');
 
+    // Connect to Redis (non-blocking — app works without it)
+    await connectRedis();
+
     const isDev = process.env.NODE_ENV !== 'production';
-    await sequelize.sync(isDev ? { alter: true } : undefined);
-    logger.info('✅ Database models synced');
+    try {
+      await sequelize.sync(isDev ? { alter: true } : undefined);
+      logger.info('✅ Database models synced');
+    } catch (syncError) {
+      // Print to console so nodemon shows full details
+      console.error('Sequelize sync error:', syncError);
+      if (syncError && syncError.stack) console.error(syncError.stack);
+      // Log with winston (stringify nested properties)
+      logger.error('❌ Sequelize sync failed: ' + (syncError && syncError.message ? syncError.message : String(syncError)));
+      try {
+        const details = {
+          sql: syncError.sql || null,
+          parent: syncError.parent ? { name: syncError.parent.name, message: syncError.parent.message } : null,
+        };
+        logger.error('Sync error details: ' + JSON.stringify(details));
+      } catch (e) {
+        logger.error('Failed to stringify syncError details');
+      }
+      throw syncError;
+    }
 
     const server = app.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);
@@ -156,6 +183,13 @@ const startServer = async () => {
           logger.info('✅ Database connections closed');
         } catch (err) {
           logger.error('Error closing database connections:', err.message);
+        }
+
+        try {
+          await redis.quit();
+          logger.info('✅ Redis connection closed');
+        } catch (err) {
+          logger.error('Error closing Redis connection:', err.message);
         }
 
         logger.info('👋 Process terminated gracefully');

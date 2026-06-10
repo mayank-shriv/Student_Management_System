@@ -6,6 +6,7 @@ import * as marksController from '../controllers/marksController.js';
 import auth from '../middleware/auth.js';
 import role from '../middleware/role.js';
 import validate from '../middleware/validate.js';
+import { cacheMiddleware } from '../middleware/cache.js';
 import { Student, User } from '../models/index.js';
 import paginate from '../utils/paginate.js';
 
@@ -14,7 +15,7 @@ const router = express.Router();
 router.use(auth);
 router.use(role('faculty'));
 
-router.get('/students', async (req, res, next) => {
+router.get('/students', cacheMiddleware('students', 300), async (req, res, next) => {
   try {
     const { limit, offset, meta } = paginate(req.query);
 
@@ -58,7 +59,7 @@ router.post(
   subjectController.createSubject
 );
 
-router.get('/subjects', subjectController.getAllSubjects);
+router.get('/subjects', cacheMiddleware('subjects', 600), subjectController.getAllSubjects);
 
 router.delete('/subjects/:id', subjectController.deleteSubject);
 
@@ -80,7 +81,7 @@ router.post(
   attendanceController.markAttendance
 );
 
-router.get('/attendance/:subjectId', attendanceController.getAttendanceBySubject);
+router.get('/attendance/:subjectId', cacheMiddleware('attendance', 180), attendanceController.getAttendanceBySubject);
 
 router.post(
   '/marks',
@@ -108,6 +109,6 @@ router.put(
   marksController.updateMarks
 );
 
-router.get('/marks/:subjectId', marksController.getMarksBySubject);
+router.get('/marks/:subjectId', cacheMiddleware('marks', 180), marksController.getMarksBySubject);
 
 export default router;
