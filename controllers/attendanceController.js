@@ -1,6 +1,7 @@
 import { Attendance, Student, Subject, User } from '../models/index.js';
 import AppError from '../utils/AppError.js';
 import paginate from '../utils/paginate.js';
+import { invalidateCache } from '../middleware/cache.js';
 
 export const markAttendance = async (req, res, next) => {
   try {
@@ -44,6 +45,11 @@ export const markAttendance = async (req, res, next) => {
         action: created ? 'created' : 'updated',
       });
     }
+
+    // Invalidate attendance and dashboard caches
+    await invalidateCache('attendance:*');
+    await invalidateCache('student:dashboard:*');
+    await invalidateCache('student:attendance:*');
 
     res.status(200).json({
       status: 'success',

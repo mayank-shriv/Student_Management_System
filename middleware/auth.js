@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { User } from '../models/index.js';
 import AppError from '../utils/AppError.js';
+import { isTokenBlacklisted, getCachedUser, cacheUser } from '../utils/tokenStore.js';
 
 const auth = async (req, res, next) => {
   try {
@@ -12,6 +13,18 @@ const auth = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET);
 
+    const blacklisted = await isTokenBlacklisted(token);
+    if (blacklisted) {
+      throw new AppError('Token has been revoked. Please login again.', 401);
+    }
+
+    const cachedUser = await getCachedUser(decoded.id);
+    if (cachedUser) {
+      req.user = cachedUser;
+      next();
+      return;
+    }
+
     const user = await User.findByPk(decoded.id, {
       attributes: { exclude: ['password'] },
     });
@@ -19,6 +32,8 @@ const auth = async (req, res, next) => {
     if (!user) {
       throw new AppError('User no longer exists.', 401);
     }
+
+    await cacheUser(user.id, user.toJSON());
 
     req.user = user;
     next();

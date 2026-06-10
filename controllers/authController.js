@@ -1,19 +1,22 @@
-import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
-import { User, Student, sequelize } from '../models/index.js';
-import AppError from '../utils/AppError.js';
-import { sendPasswordResetEmail } from '../utils/email.js';
-import logger from '../config/logger.js';
+import jwt from "jsonwebtoken";
+import crypto from "crypto";
+import { User, Student, sequelize } from "../models/index.js";
+import AppError from "../utils/AppError.js";
+import { sendPasswordResetEmail } from "../utils/email.js";
+import logger from "../config/logger.js";
+import { storeRefreshToken, deleteRefreshToken, getRefreshToken, blacklistAccessToken, invalidateUserCache } from '../utils/tokenStore.js';
 
-const ACCESS_TOKEN_COOKIE = 'access_token';
-const REFRESH_TOKEN_COOKIE = 'refresh_token';
-const ACCESS_TOKEN_EXPIRE = process.env.ACCESS_TOKEN_EXPIRE || '15m';
-const REFRESH_TOKEN_EXPIRE = process.env.REFRESH_TOKEN_EXPIRE || '7d';
-const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET;
-const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET;
+const ACCESS_TOKEN_COOKIE = "access_token";
+const REFRESH_TOKEN_COOKIE = "refresh_token";
+const ACCESS_TOKEN_EXPIRE = process.env.ACCESS_TOKEN_EXPIRE || "15m";
+const REFRESH_TOKEN_EXPIRE = process.env.REFRESH_TOKEN_EXPIRE || "7d";
+const ACCESS_TOKEN_SECRET =
+  process.env.ACCESS_TOKEN_SECRET || process.env.JWT_SECRET;
+const REFRESH_TOKEN_SECRET =
+  process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET;
 
 export const durationToMs = (duration, fallbackMs) => {
-  const match = /^(\d+)([smhd])$/.exec(duration || '');
+  const match = /^(\d+)([smhd])$/.exec(duration || "");
   if (!match) return fallbackMs;
 
   const value = Number(match[1]);
@@ -29,7 +32,7 @@ export const durationToMs = (duration, fallbackMs) => {
 };
 
 const hashToken = (token) => {
-  return crypto.createHash('sha256').update(token).digest('hex');
+  return crypto.createHash("sha256").update(token).digest("hex");
 };
 
 const signAccessToken = (id) => {
@@ -45,24 +48,28 @@ const signRefreshToken = (id) => {
 };
 
 export const getCookieOptions = (maxAge) => {
+  const isProduction = process.env.NODE_ENV === "production";
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     maxAge,
+    path: "/",
   };
 };
 
 const clearAuthCookies = (res) => {
+  const isProduction = process.env.NODE_ENV === "production";
   const expiredCookieOptions = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     expires: new Date(0),
+    path: "/",
   };
 
-  res.cookie(ACCESS_TOKEN_COOKIE, '', expiredCookieOptions);
-  res.cookie(REFRESH_TOKEN_COOKIE, '', expiredCookieOptions);
+  res.cookie(ACCESS_TOKEN_COOKIE, "", expiredCookieOptions);
+  res.cookie(REFRESH_TOKEN_COOKIE, "", expiredCookieOptions);
 };
 
 export const issueTokens = async (user) => {
@@ -70,7 +77,11 @@ export const issueTokens = async (user) => {
   const refreshToken = signRefreshToken(user.id);
 
   user.refresh_token = hashToken(refreshToken);
-  await user.save({ fields: ['refresh_token'] });
+  await user.save({ fields: ["refresh_token"] });
+
+  // Store refresh token hash in Redis with TTL matching token expiry
+  const refreshTtlMs = durationToMs(REFRESH_TOKEN_EXPIRE, 7 * 24 * 60 * 60 * 1000);
+  await storeRefreshToken(user.id, hashToken(refreshToken), Math.floor(refreshTtlMs / 1000));
 
   return { accessToken, refreshToken };
 };
@@ -78,13 +89,24 @@ export const issueTokens = async (user) => {
 const sendTokenResponse = async (user, statusCode, res) => {
   const { accessToken, refreshToken } = await issueTokens(user);
   const accessTokenMaxAge = durationToMs(ACCESS_TOKEN_EXPIRE, 15 * 60 * 1000);
-  const refreshTokenMaxAge = durationToMs(REFRESH_TOKEN_EXPIRE, 7 * 24 * 60 * 60 * 1000);
+  const refreshTokenMaxAge = durationToMs(
+    REFRESH_TOKEN_EXPIRE,
+    7 * 24 * 60 * 60 * 1000,
+  );
 
-  res.cookie(ACCESS_TOKEN_COOKIE, accessToken, getCookieOptions(accessTokenMaxAge));
-  res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, getCookieOptions(refreshTokenMaxAge));
+  res.cookie(
+    ACCESS_TOKEN_COOKIE,
+    accessToken,
+    getCookieOptions(accessTokenMaxAge),
+  );
+  res.cookie(
+    REFRESH_TOKEN_COOKIE,
+    refreshToken,
+    getCookieOptions(refreshTokenMaxAge),
+  );
 
   res.status(statusCode).json({
-    status: 'success',
+    status: "success",
     data: {
       user: user.toSafeObject(),
     },
@@ -94,32 +116,49 @@ const sendTokenResponse = async (user, statusCode, res) => {
 export const register = async (req, res, next) => {
   const t = await sequelize.transaction();
   try {
-    const { name, email, password, role, enrollment_no, department, invite_code } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role,
+      enrollment_no,
+      department,
+      invite_code,
+    } = req.body;
 
-    if (role === 'faculty') {
+    if (role === "faculty") {
       const expectedCode = process.env.FACULTY_INVITE_CODE;
       if (!expectedCode || invite_code !== expectedCode) {
-        throw new AppError('Invalid or missing faculty invite code.', 403);
+        throw new AppError("Invalid or missing faculty invite code.", 403);
       }
     }
 
-    const existingUser = await User.findOne({ where: { email }, transaction: t });
+    const existingUser = await User.findOne({
+      where: { email },
+      transaction: t,
+    });
     if (existingUser) {
-      throw new AppError('Email already registered.', 409);
+      throw new AppError("Email already registered.", 409);
     }
 
-    const user = await User.create({ name, email, password, role }, { transaction: t });
+    const user = await User.create(
+      { name, email, password, role },
+      { transaction: t },
+    );
 
-    if (role === 'student') {
+    if (role === "student") {
       if (!enrollment_no) {
-        throw new AppError('Enrollment number is required for students.', 400);
+        throw new AppError("Enrollment number is required for students.", 400);
       }
 
-      await Student.create({
-        user_id: user.id,
-        enrollment_no,
-        department: department || null,
-      }, { transaction: t });
+      await Student.create(
+        {
+          user_id: user.id,
+          enrollment_no,
+          department: department || null,
+        },
+        { transaction: t },
+      );
     }
 
     await t.commit();
@@ -137,16 +176,19 @@ export const login = async (req, res, next) => {
 
     const user = await User.findOne({ where: { email } });
     if (!user) {
-      throw new AppError('Invalid email or password.', 401);
+      throw new AppError("Invalid email or password.", 401);
     }
 
     if (!user.password) {
-      throw new AppError('This account uses Google Sign-In. Please use the Google button to log in.', 401);
+      throw new AppError(
+        "This account uses Google Sign-In. Please use the Google button to log in.",
+        401,
+      );
     }
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
-      throw new AppError('Invalid email or password.', 401);
+      throw new AppError("Invalid email or password.", 401);
     }
 
     await sendTokenResponse(user, 200, res);
@@ -160,7 +202,7 @@ export const refresh = async (req, res, next) => {
     const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
 
     if (!refreshToken) {
-      throw new AppError('Refresh token missing. Please login again.', 401);
+      throw new AppError("Refresh token missing. Please login again.", 401);
     }
 
     const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
@@ -168,26 +210,39 @@ export const refresh = async (req, res, next) => {
 
     if (!user || !user.refresh_token) {
       clearAuthCookies(res);
-      throw new AppError('Session expired. Please login again.', 401);
+      throw new AppError("Session expired. Please login again.", 401);
     }
 
     const hashedRefreshToken = hashToken(refreshToken);
+
+    // Verify refresh token against Redis store too
+    const storedHash = await getRefreshToken(decoded.id);
+    if (storedHash && storedHash !== hashedRefreshToken) {
+      await deleteRefreshToken(decoded.id);
+      clearAuthCookies(res);
+      throw new AppError('Refresh token reuse detected. Please login again.', 401);
+    }
+
     if (user.refresh_token !== hashedRefreshToken) {
       user.refresh_token = null;
-      await user.save({ fields: ['refresh_token'] });
+      await user.save({ fields: ["refresh_token"] });
       clearAuthCookies(res);
-      throw new AppError('Invalid refresh token. Please login again.', 401);
+      throw new AppError("Invalid refresh token. Please login again.", 401);
     }
 
     await sendTokenResponse(user, 200, res);
   } catch (error) {
     clearAuthCookies(res);
 
-    if (error.name === 'JsonWebTokenError') {
-      return next(new AppError('Invalid refresh token. Please login again.', 401));
+    if (error.name === "JsonWebTokenError") {
+      return next(
+        new AppError("Invalid refresh token. Please login again.", 401),
+      );
     }
-    if (error.name === 'TokenExpiredError') {
-      return next(new AppError('Refresh token expired. Please login again.', 401));
+    if (error.name === "TokenExpiredError") {
+      return next(
+        new AppError("Refresh token expired. Please login again.", 401),
+      );
     }
     next(error);
   }
@@ -204,17 +259,31 @@ export const logout = async (req, res, next) => {
 
         if (user?.refresh_token === hashToken(refreshToken)) {
           user.refresh_token = null;
-          await user.save({ fields: ['refresh_token'] });
+          await user.save({ fields: ["refresh_token"] });
+          await deleteRefreshToken(decoded.id);
         }
-      } catch (error) {
+      } catch (error) {}
+    }
+
+    // Blacklist the current access token for its remaining lifetime
+    const accessToken = req.cookies?.access_token;
+    if (accessToken) {
+      try {
+        const decoded_access = jwt.verify(accessToken, ACCESS_TOKEN_SECRET, { ignoreExpiration: true });
+        const remainingTtl = decoded_access.exp - Math.floor(Date.now() / 1000);
+        if (remainingTtl > 0) {
+          await blacklistAccessToken(accessToken, remainingTtl);
+        }
+      } catch (e) {
+        // Token already invalid, no need to blacklist
       }
     }
 
     clearAuthCookies(res);
 
     res.status(200).json({
-      status: 'success',
-      message: 'Logged out successfully.',
+      status: "success",
+      message: "Logged out successfully.",
     });
   } catch (error) {
     next(error);
@@ -224,18 +293,22 @@ export const logout = async (req, res, next) => {
 export const getMe = async (req, res, next) => {
   try {
     const user = req.user;
-    const data = { user: user.toSafeObject() };
+    const data = {
+      user: typeof user.toSafeObject === 'function'
+        ? user.toSafeObject()
+        : { id: user.id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt },
+    };
 
-    if (user.role === 'student') {
+    if (user.role === "student") {
       const studentProfile = await Student.findOne({
         where: { user_id: user.id },
-        attributes: ['id', 'enrollment_no', 'department'],
+        attributes: ["id", "enrollment_no", "department"],
       });
       data.studentProfile = studentProfile;
     }
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       data,
     });
   } catch (error) {
@@ -251,21 +324,23 @@ export const forgotPassword = async (req, res, next) => {
 
     if (!user) {
       return res.status(200).json({
-        status: 'success',
-        message: 'If an account with that email exists, a reset token has been generated.',
+        status: "success",
+        message:
+          "If an account with that email exists, a reset token has been generated.",
       });
     }
 
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetToken = crypto.randomBytes(32).toString("hex");
     const hashedToken = hashToken(resetToken);
 
     user.reset_token = hashedToken;
     user.reset_token_expires = new Date(Date.now() + 60 * 60 * 1000);
-    await user.save({ fields: ['reset_token', 'reset_token_expires'] });
+    await user.save({ fields: ["reset_token", "reset_token_expires"] });
 
     const response = {
-      status: 'success',
-      message: 'If an account with that email exists, a password reset link has been sent.',
+      status: "success",
+      message:
+        "If an account with that email exists, a password reset link has been sent.",
     };
 
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
@@ -273,13 +348,18 @@ export const forgotPassword = async (req, res, next) => {
         await sendPasswordResetEmail(user.email, resetToken);
         response.emailSent = true;
       } catch (emailError) {
-        logger.error('Failed to send reset email, falling back to token response:', emailError.message);
+        logger.error(
+          "Failed to send reset email, falling back to token response:",
+          emailError.message,
+        );
       }
     } else {
-      logger.warn('SMTP not configured — returning reset token in response (dev mode).');
+      logger.warn(
+        "SMTP not configured — returning reset token in response (dev mode).",
+      );
     }
 
-    if (process.env.NODE_ENV !== 'production' && !response.emailSent) {
+    if (process.env.NODE_ENV !== "production" && !response.emailSent) {
       response.resetToken = resetToken;
       response.resetUrl = `/reset-password?token=${resetToken}`;
     }
@@ -295,7 +375,7 @@ export const resetPassword = async (req, res, next) => {
     const { token, password } = req.body;
 
     if (!token) {
-      throw new AppError('Reset token is required.', 400);
+      throw new AppError("Reset token is required.", 400);
     }
 
     const hashedToken = hashToken(token);
@@ -307,14 +387,17 @@ export const resetPassword = async (req, res, next) => {
     });
 
     if (!user) {
-      throw new AppError('Invalid or expired reset token.', 400);
+      throw new AppError("Invalid or expired reset token.", 400);
     }
 
     if (!user.reset_token_expires || user.reset_token_expires < new Date()) {
       user.reset_token = null;
       user.reset_token_expires = null;
-      await user.save({ fields: ['reset_token', 'reset_token_expires'] });
-      throw new AppError('Reset token has expired. Please request a new one.', 400);
+      await user.save({ fields: ["reset_token", "reset_token_expires"] });
+      throw new AppError(
+        "Reset token has expired. Please request a new one.",
+        400,
+      );
     }
 
     user.password = password;
@@ -323,9 +406,13 @@ export const resetPassword = async (req, res, next) => {
     user.refresh_token = null;
     await user.save();
 
+    await deleteRefreshToken(user.id);
+    await invalidateUserCache(user.id);
+
     res.status(200).json({
-      status: 'success',
-      message: 'Password has been reset successfully. You can now login with your new password.',
+      status: "success",
+      message:
+        "Password has been reset successfully. You can now login with your new password.",
     });
   } catch (error) {
     next(error);

@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 
 import logger from './config/logger.js';
 import { sequelize } from './models/index.js';
+import { redis, connectRedis, isRedisReady } from './config/redis.js';
 import errorHandler from './middleware/errorHandler.js';
 
 import authRoutes from './routes/authRoutes.js';
@@ -41,12 +42,15 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://accounts.google.com", "https://www.gstatic.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com", "https://apis.google.com", "https://www.gstatic.com"],
-      scriptSrcElem: ["'self'", "https://accounts.google.com", "https://apis.google.com", "https://www.gstatic.com"],
+      scriptSrcElem: ["'self'", "'unsafe-inline'", "https://accounts.google.com", "https://apis.google.com", "https://www.gstatic.com"],
       frameSrc: ["https://accounts.google.com"],
       connectSrc: ["'self'", "https://accounts.google.com", "https://apis.google.com"],
       imgSrc: ["'self'", "data:", "https://lh3.googleusercontent.com", "https://www.gstatic.com", "https://*.googleusercontent.com"],
+      objectSrc: ["'none'"],
+      childSrc: ["https://accounts.google.com"],
     },
   },
+  crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
 }));
 
 app.use(cors({
@@ -87,6 +91,7 @@ app.get('/api/health', async (req, res) => {
         heapUsed: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB`,
       },
       database: 'connected',
+      redis: isRedisReady() ? 'connected' : 'disconnected',
       environment: process.env.NODE_ENV || 'development',
       timestamp: new Date().toISOString(),
     });
@@ -95,6 +100,7 @@ app.get('/api/health', async (req, res) => {
     res.status(503).json({
       status: 'unhealthy',
       database: 'disconnected',
+      redis: isRedisReady() ? 'connected' : 'disconnected',
       timestamp: new Date().toISOString(),
     });
   }
@@ -135,6 +141,9 @@ const startServer = async () => {
     await sequelize.authenticate();
     logger.info('✅ MySQL connected successfully');
 
+    // Connect to Redis (non-blocking — app works without it)
+    await connectRedis();
+
     const isDev = process.env.NODE_ENV !== 'production';
     try {
       await sequelize.sync(isDev ? { alter: true } : undefined);
@@ -174,6 +183,13 @@ const startServer = async () => {
           logger.info('✅ Database connections closed');
         } catch (err) {
           logger.error('Error closing database connections:', err.message);
+        }
+
+        try {
+          await redis.quit();
+          logger.info('✅ Redis connection closed');
+        } catch (err) {
+          logger.error('Error closing Redis connection:', err.message);
         }
 
         logger.info('👋 Process terminated gracefully');
