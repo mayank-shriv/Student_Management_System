@@ -6,7 +6,7 @@ A Node.js student management system for handling students, subjects, attendance,
 
 **Author:** Mayank Shrivastava  
 **Runtime:** Node.js ≥ 18 (ES Modules)  
-**Database:** MySQL via Sequelize ORM  
+**Database:** MongoDB via Mongoose ODM  
 
 ---
 
@@ -16,8 +16,8 @@ A Node.js student management system for handling students, subjects, attendance,
 |-------|-----------|---------|
 | **Runtime** | Node.js (ESM) | Server execution |
 | **Framework** | Express 4 | HTTP routing & middleware |
-| **ORM** | Sequelize 6 | Database abstraction & migrations |
-| **Database** | MySQL 2 | Data persistence |
+| **ODM** | Mongoose 8 | Database abstraction & schemas |
+| **Database** | MongoDB | Data persistence |
 | **Auth** | JWT (jsonwebtoken) + bcryptjs | Token-based auth & password hashing |
 | **Validation** | express-validator | Request body/param validation |
 | **Security** | Helmet, CORS, express-rate-limit | HTTP hardening & brute-force protection |
@@ -64,8 +64,8 @@ graph TB
     end
 
     subgraph "Data Layer"
-        SEQ["Sequelize ORM"]
-        DB[(MySQL)]
+        SEQ["Mongoose ODM"]
+        DB[(MongoDB)]
     end
 
     subgraph "Utilities"
@@ -91,11 +91,11 @@ graph TB
 ```mermaid
 erDiagram
     USER {
-        int id PK
+        ObjectId _id PK
         string name
         string email UK
         string password
-        enum role "faculty | student"
+        string role "faculty | student"
         string refresh_token
         string reset_token
         datetime reset_token_expires
