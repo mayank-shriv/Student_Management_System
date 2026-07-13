@@ -40,21 +40,17 @@ export const googleLogin = async (req, res, next) => {
       throw new AppError('Unable to retrieve email from Google account.', 400);
     }
 
-    // Need +password to check if this is a password-based account
-    let user = await User.findOne({ email }).select('+password');
+    let user = await User.findOne({ email });
 
     if (user) {
+      // If a role was provided, the user is trying to register on the registration page,
+      // but an account with this email already exists. We should block silent login.
+      if (role) {
+        throw new AppError('An account with this email already exists. Please log in instead.', 409);
+      }
+
       if (!user.google_id) {
-        // Security: Do NOT auto-link Google to existing password-based accounts.
-        // The user must log in with their password first, then link Google.
-        if (user.password) {
-          throw new AppError(
-            'An account with this email already exists. Please log in with your password first.',
-            409
-          );
-        }
-        // If user has no password (was created via Google previously but google_id is missing),
-        // safe to link since they have no other auth method.
+        // Auto-link Google to the existing password-registered account
         user.google_id = googleId;
         await user.save();
       } else if (user.google_id !== googleId) {

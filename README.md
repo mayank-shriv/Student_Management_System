@@ -1,6 +1,6 @@
 # 📚 Student Management System
 
-A Node.js student management system for managing students, subjects, attendance, and marks. Built with **Express**, **Sequelize**, and **MySQL**, using an MVC-style organization with faculty and student roles.
+A Node.js student management system for managing students, subjects, attendance, and marks. Built with **Express**, **Mongoose**, and **MongoDB**, using an MVC-style organization with faculty and student roles.
 
 **Author:** Mayank Shrivastava
 
@@ -12,8 +12,8 @@ A Node.js student management system for managing students, subjects, attendance,
 |-------|-----------|
 | Runtime | Node.js ≥ 18 (ES Modules) |
 | Framework | Express.js 4 |
-| ORM | Sequelize 6 |
-| Database | MySQL |
+| ODM | Mongoose 8 |
+| Database | MongoDB |
 | Auth | JWT (Dual-token) + bcryptjs |
 | Caching | None |
 | Email | Nodemailer (SMTP) |
@@ -59,8 +59,8 @@ A Node.js student management system for managing students, subjects, attendance,
 │                     ┌─────────┼─────────┐                            │
 │                     ▼         ▼         ▼                            │
 │               ┌─────────┐ ┌───────┐ ┌────────┐                      │
-│               │ Sequelize│ │ — │ │ Email  │                      │
-│               │   ORM   │ │ Cache │ │ (SMTP) │                      │
+│               │ Mongoose│ │ — │ │ Email  │                      │
+│               │   ODM   │ │ Cache │ │ (SMTP) │                      │
 │               └────┬────┘ └───────┘ └────────┘                      │
 │                    │                                                  │
 │  ┌──── Error Handler (centralized) ──────────────────────────────┐  │
