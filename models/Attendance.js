@@ -1,49 +1,48 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
 
-const Attendance = sequelize.define('Attendance', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
+const attendanceSchema = new mongoose.Schema({
   student_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'students',
-      key: 'id',
-    },
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Student',
+    required: true,
+    index: true,
   },
   subject_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'subjects',
-      key: 'id',
-    },
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subject',
+    required: true,
+    index: true,
   },
   date: {
-    type: DataTypes.DATEONLY,
-    allowNull: false,
+    type: String,
+    required: true,
+    index: true,
   },
   status: {
-    type: DataTypes.ENUM('present', 'absent'),
-    allowNull: false,
+    type: String,
+    enum: ['present', 'absent'],
+    required: true,
   },
 }, {
-  tableName: 'attendance',
   timestamps: true,
-  indexes: [
-    { fields: ['student_id'] },
-    { fields: ['subject_id'] },
-    { fields: ['date'] },
-    {
-      unique: true,
-      fields: ['student_id', 'subject_id', 'date'],
-      name: 'attendance_unique_constraint',
-    },
-  ],
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
 });
 
-export default Attendance;
+attendanceSchema.index({ student_id: 1, subject_id: 1, date: 1 }, { unique: true });
+
+attendanceSchema.virtual('student', {
+  ref: 'Student',
+  localField: 'student_id',
+  foreignField: '_id',
+  justOne: true,
+});
+
+attendanceSchema.virtual('subject', {
+  ref: 'Subject',
+  localField: 'subject_id',
+  foreignField: '_id',
+  justOne: true,
+});
+
+export default mongoose.model('Attendance', attendanceSchema);

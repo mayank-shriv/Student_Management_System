@@ -37,11 +37,11 @@ function initGoogleSignIn() {
 
     google.accounts.id.renderButton(googleBtnContainer, {
       type: 'standard',
-      theme: 'filled_black',
+      theme: document.documentElement.getAttribute('data-theme') === 'light' ? 'outline' : 'filled_black',
       size: 'large',
       width: googleBtnContainer.offsetWidth || 380,
       text: 'signin_with',
-      shape: 'rectangular',
+      shape: 'pill',
       logo_alignment: 'center',
     });
   } catch (err) {

@@ -1,4 +1,5 @@
 let currentUser = null;
+const loadedTabs = new Set();
 
 function getGrade(marks) {
   if (marks >= 90) return { grade: 'A+', class: 'badge-success' };
@@ -28,14 +29,20 @@ async function checkAuth() {
     document.getElementById('user-name').textContent = currentUser.name;
     document.getElementById('user-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
 
+    // Only load the dashboard tab initially; others load lazily on click
     loadDashboard();
-    loadAttendance();
-    loadMarks();
-    loadSubjects();
+    loadedTabs.add('overview');
   } catch (error) {
     window.location.href = '/';
   }
 }
+
+const tabLoaders = {
+  overview: () => { /* already loaded on auth */ },
+  attendance: loadAttendance,
+  marks: loadMarks,
+  subjects: loadSubjects,
+};
 
 document.querySelectorAll('.nav-item[data-tab]').forEach((item) => {
   item.addEventListener('click', () => {
@@ -46,6 +53,13 @@ document.querySelectorAll('.nav-item[data-tab]').forEach((item) => {
     document.getElementById(`tab-${item.dataset.tab}`).classList.add('active');
 
     document.getElementById('sidebar').classList.remove('open');
+
+    // Lazy-load tab data on first visit
+    const tabName = item.dataset.tab;
+    if (!loadedTabs.has(tabName) && tabLoaders[tabName]) {
+      tabLoaders[tabName]();
+      loadedTabs.add(tabName);
+    }
   });
 });
 

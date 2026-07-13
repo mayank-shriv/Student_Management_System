@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Student Dashboard — View your attendance, marks, and subjects">
   <title>Student Dashboard — Student Management System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
   <link rel="stylesheet" href="/css/style.css">
+  <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('sms-theme')||'dark');</script>
 </head>
 <body>
   <button class="mobile-toggle" id="mobile-toggle">☰</button>
@@ -45,6 +49,10 @@
             <div class="user-role">Student</div>
           </div>
         </div>
+        <button class="theme-toggle" id="theme-toggle" title="Toggle theme">
+          <span class="theme-icon">🌙</span>
+          <span class="theme-label">Light Mode</span>
+        </button>
         <button class="btn btn-secondary btn-sm btn-block" id="logout-btn">Logout</button>
       </div>
     </aside>

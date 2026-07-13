@@ -3,15 +3,13 @@ import 'dotenv/config';
 import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
-import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import mongoose from 'mongoose';
 
-import logger from './config/logger.js';
-import { sequelize } from './models/index.js';
-import { redis, connectRedis, isRedisReady } from './config/redis.js';
+import { connectDB } from './models/index.js';
 import errorHandler from './middleware/errorHandler.js';
 
 import authRoutes from './routes/authRoutes.js';
@@ -26,7 +24,7 @@ const REQUIRED_ENV_VARS = [
 
 for (const envVar of REQUIRED_ENV_VARS) {
   if (!process.env[envVar]) {
-    logger.error(`❌ Missing required environment variable: ${envVar}`);
+    console.error(`Missing required environment variable: ${envVar}`);
     process.exit(1);
   }
 }
@@ -64,10 +62,6 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-const morganStream = {
-  write: (message) => logger.info(message.trim()),
-};
-app.use(morgan('combined', { stream: morganStream }));
 
 const staticMaxAge = process.env.NODE_ENV === 'production' ? '7d' : '1d';
 app.use(express.static(path.join(__dirname, 'public'), {
@@ -82,7 +76,8 @@ app.use('/api/student', studentRoutes);
 
 app.get('/api/health', async (req, res) => {
   try {
-    await sequelize.authenticate();
+    const dbState = mongoose.connection.readyState;
+    if (dbState !== 1) throw new Error('Database not connected');
     res.status(200).json({
       status: 'healthy',
       uptime: Math.round(process.uptime()),
@@ -91,16 +86,14 @@ app.get('/api/health', async (req, res) => {
         heapUsed: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB`,
       },
       database: 'connected',
-      redis: isRedisReady() ? 'connected' : 'disconnected',
       environment: process.env.NODE_ENV || 'development',
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    logger.error('Health check failed:', error.message);
+    console.error('Health check failed:', error.message);
     res.status(503).json({
       status: 'unhealthy',
       database: 'disconnected',
-      redis: isRedisReady() ? 'connected' : 'disconnected',
       timestamp: new Date().toISOString(),
     });
   }
@@ -138,66 +131,36 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   try {
-    await sequelize.authenticate();
-    logger.info('✅ MySQL connected successfully');
-
-    // Connect to Redis (non-blocking — app works without it)
-    await connectRedis();
-
-    const isDev = process.env.NODE_ENV !== 'production';
-    try {
-      await sequelize.sync(isDev ? { alter: true } : undefined);
-      logger.info('✅ Database models synced');
-    } catch (syncError) {
-      // Print to console so nodemon shows full details
-      console.error('Sequelize sync error:', syncError);
-      if (syncError && syncError.stack) console.error(syncError.stack);
-      // Log with winston (stringify nested properties)
-      logger.error('❌ Sequelize sync failed: ' + (syncError && syncError.message ? syncError.message : String(syncError)));
-      try {
-        const details = {
-          sql: syncError.sql || null,
-          parent: syncError.parent ? { name: syncError.parent.name, message: syncError.parent.message } : null,
-        };
-        logger.error('Sync error details: ' + JSON.stringify(details));
-      } catch (e) {
-        logger.error('Failed to stringify syncError details');
-      }
-      throw syncError;
-    }
+    await connectDB();
 
     const server = app.listen(PORT, () => {
-      logger.info(`🚀 Server running on port ${PORT}`);
-      logger.info(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      logger.info(`http://localhost:${PORT}`);
+      console.log(`Server running on port ${PORT}`);
+      console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`http://localhost:${PORT}`);
     });
 
+    // Prevent requests from hanging indefinitely
+    server.timeout = 30_000;
+
     const gracefulShutdown = (signal) => {
-      logger.info(`${signal} received. Starting graceful shutdown...`);
+      console.log(`${signal} received. Starting graceful shutdown...`);
 
       server.close(async () => {
-        logger.info('✅ HTTP server closed — no new connections accepted');
+        console.log('HTTP server closed — no new connections accepted');
 
         try {
-          await sequelize.close();
-          logger.info('✅ Database connections closed');
+          await mongoose.disconnect();
+          console.log('Database connections closed');
         } catch (err) {
-          logger.error('Error closing database connections:', err.message);
+          console.error('Error closing database connections:', err.message);
         }
 
-        try {
-          await redis.quit();
-          logger.info('✅ Redis connection closed');
-        } catch (err) {
-          logger.error('Error closing Redis connection:', err.message);
-        }
-
-        logger.info('👋 Process terminated gracefully');
+        console.log('Process terminated gracefully');
         process.exit(0);
       });
 
       setTimeout(() => {
-        logger.error('⚠️  Graceful shutdown timed out — forcing exit');
+        console.error('Graceful shutdown timed out — forcing exit');
         process.exit(1);
       }, 10_000);
     };
@@ -205,7 +168,7 @@ const startServer = async () => {
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
     process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   } catch (error) {
-    logger.error('❌ Unable to start server:', error);
+    console.error('Unable to start server:', error);
     process.exit(1);
   }
 };

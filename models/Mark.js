@@ -1,48 +1,44 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
 
-const Mark = sequelize.define('Mark', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
+const markSchema = new mongoose.Schema({
   student_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'students',
-      key: 'id',
-    },
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Student',
+    required: true,
+    index: true,
   },
   subject_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'subjects',
-      key: 'id',
-    },
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Subject',
+    required: true,
+    index: true,
   },
   marks: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    validate: {
-      min: { args: [0], msg: 'Marks cannot be negative' },
-      max: { args: [100], msg: 'Marks cannot exceed 100' },
-    },
+    type: Number,
+    required: true,
+    min: [0, 'Marks cannot be negative'],
+    max: [100, 'Marks cannot exceed 100'],
   },
 }, {
-  tableName: 'marks',
   timestamps: true,
-  indexes: [
-    { fields: ['student_id'] },
-    { fields: ['subject_id'] },
-    {
-      unique: true,
-      fields: ['student_id', 'subject_id'],
-      name: 'marks_unique_constraint',
-    },
-  ],
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
 });
 
-export default Mark;
+markSchema.index({ student_id: 1, subject_id: 1 }, { unique: true });
+
+markSchema.virtual('student', {
+  ref: 'Student',
+  localField: 'student_id',
+  foreignField: '_id',
+  justOne: true,
+});
+
+markSchema.virtual('subject', {
+  ref: 'Subject',
+  localField: 'subject_id',
+  foreignField: '_id',
+  justOne: true,
+});
+
+export default mongoose.model('Mark', markSchema);

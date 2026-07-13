@@ -25,9 +25,7 @@ const auth = async (req, res, next) => {
       return;
     }
 
-    const user = await User.findByPk(decoded.id, {
-      attributes: { exclude: ['password'] },
-    });
+    const user = await User.findById(decoded.id);
 
     if (!user) {
       throw new AppError('User no longer exists.', 401);

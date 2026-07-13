@@ -1,5 +1,5 @@
 import express from 'express';
-import { body } from 'express-validator';
+import { body, param } from 'express-validator';
 import * as subjectController from '../controllers/subjectController.js';
 import * as attendanceController from '../controllers/attendanceController.js';
 import * as marksController from '../controllers/marksController.js';
@@ -7,41 +7,38 @@ import auth from '../middleware/auth.js';
 import role from '../middleware/role.js';
 import validate from '../middleware/validate.js';
 import { cacheMiddleware } from '../middleware/cache.js';
-import { Student, User } from '../models/index.js';
+import { Student } from '../models/index.js';
 import paginate from '../utils/paginate.js';
+import catchAsync from '../utils/catchAsync.js';
 
 const router = express.Router();
 
 router.use(auth);
 router.use(role('faculty'));
 
-router.get('/students', cacheMiddleware('students', 300), async (req, res, next) => {
-  try {
-    const { limit, offset, meta } = paginate(req.query);
+router.get('/students', cacheMiddleware('students', 300), catchAsync(async (req, res) => {
+  const { limit, offset, meta } = paginate(req.query);
 
-    const { count, rows } = await Student.findAndCountAll({
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'name', 'email'],
-        },
-      ],
-      order: [[{ model: User, as: 'user' }, 'name', 'ASC']],
-      limit,
-      offset,
-    });
+  const allStudents = await Student.find()
+    .populate('user', 'name email');
 
-    res.status(200).json({
-      status: 'success',
-      results: rows.length,
-      data: { students: rows },
-      pagination: meta(count),
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+  // Sort by user name (in-memory since student list is bounded by class size)
+  allStudents.sort((a, b) => {
+    const nameA = a.user?.name || '';
+    const nameB = b.user?.name || '';
+    return nameA.localeCompare(nameB);
+  });
+
+  const count = allStudents.length;
+  const rows = allStudents.slice(offset, offset + limit);
+
+  res.status(200).json({
+    status: 'success',
+    results: rows.length,
+    data: { students: rows },
+    pagination: meta(count),
+  });
+}));
 
 router.post(
   '/subjects',
@@ -61,19 +58,26 @@ router.post(
 
 router.get('/subjects', cacheMiddleware('subjects', 600), subjectController.getAllSubjects);
 
-router.delete('/subjects/:id', subjectController.deleteSubject);
+router.delete(
+  '/subjects/:id',
+  [
+    param('id').isMongoId().withMessage('Valid subject ID is required'),
+    validate,
+  ],
+  subjectController.deleteSubject
+);
 
 router.post(
   '/attendance',
   [
     body('subject_id')
-      .isInt({ min: 1 }).withMessage('Valid subject ID is required'),
+      .isMongoId().withMessage('Valid subject ID is required'),
     body('date')
       .isDate().withMessage('Valid date is required (YYYY-MM-DD)'),
     body('records')
       .isArray({ min: 1 }).withMessage('At least one attendance record is required'),
     body('records.*.student_id')
-      .isInt({ min: 1 }).withMessage('Valid student ID is required'),
+      .isMongoId().withMessage('Valid student ID is required'),
     body('records.*.status')
       .isIn(['present', 'absent']).withMessage('Status must be present or absent'),
     validate,
@@ -87,11 +91,11 @@ router.post(
   '/marks',
   [
     body('subject_id')
-      .isInt({ min: 1 }).withMessage('Valid subject ID is required'),
+      .isMongoId().withMessage('Valid subject ID is required'),
     body('records')
       .isArray({ min: 1 }).withMessage('At least one marks record is required'),
     body('records.*.student_id')
-      .isInt({ min: 1 }).withMessage('Valid student ID is required'),
+      .isMongoId().withMessage('Valid student ID is required'),
     body('records.*.marks')
       .isInt({ min: 0, max: 100 }).withMessage('Marks must be between 0 and 100'),
     validate,

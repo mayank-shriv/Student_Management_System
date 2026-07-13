@@ -1,20 +1,20 @@
-import logger from '../config/logger.js';
-
 const errorHandler = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
 
-  logger.error({
-    message: err.message,
-    statusCode: err.statusCode,
-    stack: err.stack,
-    url: req.originalUrl,
-    method: req.method,
-    ip: req.ip,
-  });
+  console.error(err);
 
-  if (err.name === 'SequelizeValidationError') {
-    const messages = err.errors.map((e) => e.message);
+  // Malformed JSON body
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({
+      status: 'fail',
+      message: 'Invalid JSON in request body.',
+    });
+  }
+
+  // Mongoose validation error
+  if (err.name === 'ValidationError') {
+    const messages = Object.values(err.errors).map((e) => e.message);
     return res.status(400).json({
       status: 'fail',
       message: 'Validation Error',
@@ -22,19 +22,21 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  if (err.name === 'SequelizeUniqueConstraintError') {
-    const messages = err.errors.map((e) => e.message);
+  // MongoDB duplicate key error
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyPattern || {})[0] || 'field';
     return res.status(409).json({
       status: 'fail',
       message: 'Duplicate Entry',
-      errors: messages,
+      errors: [`${field} already exists`],
     });
   }
 
-  if (err.name === 'SequelizeForeignKeyConstraintError') {
+  // Mongoose CastError (e.g., invalid ObjectId)
+  if (err.name === 'CastError') {
     return res.status(400).json({
       status: 'fail',
-      message: 'Invalid reference. Related record does not exist.',
+      message: `Invalid ${err.path}: ${err.value}`,
     });
   }
 

@@ -1,43 +1,37 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
 
-const Subject = sequelize.define('Subject', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
+const subjectSchema = new mongoose.Schema({
   name: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
-    validate: {
-      notEmpty: { msg: 'Subject name is required' },
-      len: { args: [2, 100], msg: 'Subject name must be between 2 and 100 characters' },
-    },
+    type: String,
+    required: [true, 'Subject name is required'],
+    trim: true,
+    minlength: [2, 'Subject name must be between 2 and 100 characters'],
+    maxlength: [100, 'Subject name must be between 2 and 100 characters'],
   },
   code: {
-    type: DataTypes.STRING(20),
-    allowNull: false,
-    unique: { msg: 'Subject code already exists' },
-    validate: {
-      notEmpty: { msg: 'Subject code is required' },
-    },
+    type: String,
+    required: [true, 'Subject code is required'],
+    unique: true,
+    trim: true,
+    uppercase: true,
   },
   faculty_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
-    references: {
-      model: 'users',
-      key: 'id',
-    },
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+    index: true,
   },
 }, {
-  tableName: 'subjects',
   timestamps: true,
-  indexes: [
-    { unique: true, fields: ['code'] },
-    { fields: ['faculty_id'] },
-  ],
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
 });
 
-export default Subject;
+subjectSchema.virtual('faculty', {
+  ref: 'User',
+  localField: 'faculty_id',
+  foreignField: '_id',
+  justOne: true,
+});
+
+export default mongoose.model('Subject', subjectSchema);
