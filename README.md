@@ -1,6 +1,6 @@
 # 📚 Student Management System
 
-A **production-grade, full-stack Node.js web application** for managing students, subjects, attendance, and marks. Built with **Express.js**, **Sequelize ORM**, and **MySQL**, following the **MVC architecture** with role-based access control (Faculty & Student).
+A Node.js student management system for managing students, subjects, attendance, and marks. Built with **Express**, **Sequelize**, and **MySQL**, using an MVC-style organization with faculty and student roles.
 
 **Author:** Mayank Shrivastava
 
@@ -15,7 +15,7 @@ A **production-grade, full-stack Node.js web application** for managing students
 | ORM | Sequelize 6 |
 | Database | MySQL |
 | Auth | JWT (Dual-token) + bcryptjs |
-| Caching | Redis (ioredis) |
+| Caching | None |
 | Email | Nodemailer (SMTP) |
 | Security | Helmet, CORS, express-rate-limit |
 | Logging | Winston + Morgan |
@@ -59,7 +59,7 @@ A **production-grade, full-stack Node.js web application** for managing students
 │                     ┌─────────┼─────────┐                            │
 │                     ▼         ▼         ▼                            │
 │               ┌─────────┐ ┌───────┐ ┌────────┐                      │
-│               │ Sequelize│ │ Redis │ │ Email  │                      │
+│               │ Sequelize│ │ — │ │ Email  │                      │
 │               │   ORM   │ │ Cache │ │ (SMTP) │                      │
 │               └────┬────┘ └───────┘ └────────┘                      │
 │                    │                                                  │
@@ -87,7 +87,7 @@ studentManagementSystem/
 ├── config/
 │   ├── database.js            ← Sequelize DB connection & pooling
 │   ├── logger.js              ← Winston logger configuration
-│   └── redis.js               ← Redis client with graceful fallback
+│   └── logger.js              ← Winston logger configuration
 │
 ├── models/
 │   ├── index.js               ← Associations hub (all relationships)
@@ -259,4 +259,4 @@ npm run dev
 npm start
 ```
 
-**Requires:** Node.js ≥ 18, MySQL, Redis (optional)
+**Requires:** Node.js ≥ 18, MySQL

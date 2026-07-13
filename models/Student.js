@@ -1,40 +1,33 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
 
-const Student = sequelize.define('Student', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
+const studentSchema = new mongoose.Schema({
   user_id: {
-    type: DataTypes.INTEGER,
-    allowNull: false,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
     unique: true,
-    references: {
-      model: 'users',
-      key: 'id',
-    },
   },
   enrollment_no: {
-    type: DataTypes.STRING(50),
-    allowNull: false,
-    unique: { msg: 'Enrollment number already exists' },
-    validate: {
-      notEmpty: { msg: 'Enrollment number is required' },
-    },
+    type: String,
+    required: [true, 'Enrollment number is required'],
+    unique: true,
+    trim: true,
   },
   department: {
-    type: DataTypes.STRING(100),
-    allowNull: true,
+    type: String,
+    trim: true,
   },
 }, {
-  tableName: 'students',
   timestamps: true,
-  indexes: [
-    { unique: true, fields: ['user_id'] },
-    { unique: true, fields: ['enrollment_no'] },
-  ],
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
 });
 
-export default Student;
+studentSchema.virtual('user', {
+  ref: 'User',
+  localField: 'user_id',
+  foreignField: '_id',
+  justOne: true,
+});
+
+export default mongoose.model('Student', studentSchema);

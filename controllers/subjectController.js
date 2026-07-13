@@ -1,72 +1,58 @@
-import { Subject, User } from '../models/index.js';
+import { Subject } from '../models/index.js';
 import AppError from '../utils/AppError.js';
+import catchAsync from '../utils/catchAsync.js';
 import { invalidateCache } from '../middleware/cache.js';
 
-export const createSubject = async (req, res, next) => {
-  try {
-    const { name, code } = req.body;
+export const createSubject = catchAsync(async (req, res, next) => {
+  const { name, code } = req.body;
 
-    const subject = await Subject.create({
-      name,
-      code: code.toUpperCase(),
-      faculty_id: req.user.id,
-    });
-
-    await invalidateCache('subjects:*');
-
-    res.status(201).json({
-      status: 'success',
-      data: { subject },
-    });
-  } catch (error) {
-    next(error);
+  if (!code) {
+    throw new AppError('Subject code is required.', 400);
   }
-};
 
-export const getAllSubjects = async (req, res, next) => {
-  try {
-    const subjects = await Subject.findAll({
-      include: [
-        {
-          model: User,
-          as: 'faculty',
-          attributes: ['id', 'name', 'email'],
-        },
-      ],
-      order: [['name', 'ASC']],
-    });
+  const subject = await Subject.create({
+    name,
+    code: code.toUpperCase(),
+    faculty_id: req.user.id,
+  });
 
-    res.status(200).json({
-      status: 'success',
-      results: subjects.length,
-      data: { subjects },
-    });
-  } catch (error) {
-    next(error);
+  await invalidateCache('subjects:*');
+
+  res.status(201).json({
+    status: 'success',
+    data: { subject },
+  });
+});
+
+export const getAllSubjects = catchAsync(async (req, res, next) => {
+  const subjects = await Subject.find({ faculty_id: req.user.id })
+    .populate('faculty', 'name email')
+    .sort({ name: 1 });
+
+  res.status(200).json({
+    status: 'success',
+    results: subjects.length,
+    data: { subjects },
+  });
+});
+
+export const deleteSubject = catchAsync(async (req, res, next) => {
+  const subject = await Subject.findById(req.params.id);
+
+  if (!subject) {
+    throw new AppError('Subject not found.', 404);
   }
-};
 
-export const deleteSubject = async (req, res, next) => {
-  try {
-    const subject = await Subject.findByPk(req.params.id);
-
-    if (!subject) {
-      throw new AppError('Subject not found.', 404);
-    }
-
-    if (subject.faculty_id !== req.user.id) {
-      throw new AppError('You can only delete your own subjects.', 403);
-    }
-
-    await subject.destroy();
-
-    await invalidateCache('subjects:*');
-
-    res.status(200).json({
-      status: 'success',
-      message: 'Subject deleted successfully.',
-    });
-  } catch (error) {
-    next(error);
+  if (subject.faculty_id.toString() !== req.user.id) {
+    throw new AppError('You can only delete your own subjects.', 403);
   }
-};
+
+  await subject.deleteOne();
+
+  await invalidateCache('subjects:*');
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Subject deleted successfully.',
+  });
+});

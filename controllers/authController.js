@@ -1,10 +1,10 @@
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { User, Student, sequelize } from "../models/index.js";
+import mongoose from "mongoose";
+import { User, Student } from "../models/index.js";
 import AppError from "../utils/AppError.js";
 import { sendPasswordResetEmail } from "../utils/email.js";
-import logger from "../config/logger.js";
-import { storeRefreshToken, deleteRefreshToken, getRefreshToken, blacklistAccessToken, invalidateUserCache } from '../utils/tokenStore.js';
+import { blacklistAccessToken, invalidateUserCache } from '../utils/tokenStore.js';
 
 const ACCESS_TOKEN_COOKIE = "access_token";
 const REFRESH_TOKEN_COOKIE = "refresh_token";
@@ -77,11 +77,7 @@ export const issueTokens = async (user) => {
   const refreshToken = signRefreshToken(user.id);
 
   user.refresh_token = hashToken(refreshToken);
-  await user.save({ fields: ["refresh_token"] });
-
-  // Store refresh token hash in Redis with TTL matching token expiry
-  const refreshTtlMs = durationToMs(REFRESH_TOKEN_EXPIRE, 7 * 24 * 60 * 60 * 1000);
-  await storeRefreshToken(user.id, hashToken(refreshToken), Math.floor(refreshTtlMs / 1000));
+  await user.save();
 
   return { accessToken, refreshToken };
 };
@@ -114,7 +110,8 @@ const sendTokenResponse = async (user, statusCode, res) => {
 };
 
 export const register = async (req, res, next) => {
-  const t = await sequelize.transaction();
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const {
       name,
@@ -133,40 +130,35 @@ export const register = async (req, res, next) => {
       }
     }
 
-    const existingUser = await User.findOne({
-      where: { email },
-      transaction: t,
-    });
+    const existingUser = await User.findOne({ email }).session(session);
     if (existingUser) {
       throw new AppError("Email already registered.", 409);
     }
 
-    const user = await User.create(
-      { name, email, password, role },
-      { transaction: t },
-    );
+    const user = new User({ name, email, password, role });
+    await user.save({ session });
 
     if (role === "student") {
       if (!enrollment_no) {
         throw new AppError("Enrollment number is required for students.", 400);
       }
 
-      await Student.create(
-        {
-          user_id: user.id,
-          enrollment_no,
-          department: department || null,
-        },
-        { transaction: t },
-      );
+      const student = new Student({
+        user_id: user._id,
+        enrollment_no,
+        department: department || null,
+      });
+      await student.save({ session });
     }
 
-    await t.commit();
+    await session.commitTransaction();
 
     await sendTokenResponse(user, 201, res);
   } catch (error) {
-    await t.rollback();
+    await session.abortTransaction();
     next(error);
+  } finally {
+    session.endSession();
   }
 };
 
@@ -174,7 +166,7 @@ export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ email }).select('+password');
     if (!user) {
       throw new AppError("Invalid email or password.", 401);
     }
@@ -206,7 +198,7 @@ export const refresh = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
-    const user = await User.findByPk(decoded.id);
+    const user = await User.findById(decoded.id);
 
     if (!user || !user.refresh_token) {
       clearAuthCookies(res);
@@ -215,17 +207,9 @@ export const refresh = async (req, res, next) => {
 
     const hashedRefreshToken = hashToken(refreshToken);
 
-    // Verify refresh token against Redis store too
-    const storedHash = await getRefreshToken(decoded.id);
-    if (storedHash && storedHash !== hashedRefreshToken) {
-      await deleteRefreshToken(decoded.id);
-      clearAuthCookies(res);
-      throw new AppError('Refresh token reuse detected. Please login again.', 401);
-    }
-
     if (user.refresh_token !== hashedRefreshToken) {
       user.refresh_token = null;
-      await user.save({ fields: ["refresh_token"] });
+      await user.save();
       clearAuthCookies(res);
       throw new AppError("Invalid refresh token. Please login again.", 401);
     }
@@ -255,14 +239,13 @@ export const logout = async (req, res, next) => {
     if (refreshToken) {
       try {
         const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET);
-        const user = await User.findByPk(decoded.id);
+        const user = await User.findById(decoded.id);
 
         if (user?.refresh_token === hashToken(refreshToken)) {
           user.refresh_token = null;
-          await user.save({ fields: ["refresh_token"] });
-          await deleteRefreshToken(decoded.id);
+          await user.save();
         }
-      } catch (error) {}
+      } catch (error) { }
     }
 
     // Blacklist the current access token for its remaining lifetime
@@ -296,14 +279,13 @@ export const getMe = async (req, res, next) => {
     const data = {
       user: typeof user.toSafeObject === 'function'
         ? user.toSafeObject()
-        : { id: user.id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt },
+        : { id: user._id || user.id, name: user.name, email: user.email, role: user.role, createdAt: user.createdAt },
     };
 
     if (user.role === "student") {
-      const studentProfile = await Student.findOne({
-        where: { user_id: user.id },
-        attributes: ["id", "enrollment_no", "department"],
-      });
+      const studentProfile = await Student.findOne(
+        { user_id: user._id || user.id },
+      ).select('enrollment_no department');
       data.studentProfile = studentProfile;
     }
 
@@ -320,7 +302,7 @@ export const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
 
-    const user = await User.findOne({ where: { email } });
+    const user = await User.findOne({ email });
 
     if (!user) {
       return res.status(200).json({
@@ -335,7 +317,7 @@ export const forgotPassword = async (req, res, next) => {
 
     user.reset_token = hashedToken;
     user.reset_token_expires = new Date(Date.now() + 60 * 60 * 1000);
-    await user.save({ fields: ["reset_token", "reset_token_expires"] });
+    await user.save();
 
     const response = {
       status: "success",
@@ -348,13 +330,13 @@ export const forgotPassword = async (req, res, next) => {
         await sendPasswordResetEmail(user.email, resetToken);
         response.emailSent = true;
       } catch (emailError) {
-        logger.error(
+        console.error(
           "Failed to send reset email, falling back to token response:",
           emailError.message,
         );
       }
     } else {
-      logger.warn(
+      console.warn(
         "SMTP not configured — returning reset token in response (dev mode).",
       );
     }
@@ -381,10 +363,8 @@ export const resetPassword = async (req, res, next) => {
     const hashedToken = hashToken(token);
 
     const user = await User.findOne({
-      where: {
-        reset_token: hashedToken,
-      },
-    });
+      reset_token: hashedToken,
+    }).select('+password');
 
     if (!user) {
       throw new AppError("Invalid or expired reset token.", 400);
@@ -393,7 +373,7 @@ export const resetPassword = async (req, res, next) => {
     if (!user.reset_token_expires || user.reset_token_expires < new Date()) {
       user.reset_token = null;
       user.reset_token_expires = null;
-      await user.save({ fields: ["reset_token", "reset_token_expires"] });
+      await user.save();
       throw new AppError(
         "Reset token has expired. Please request a new one.",
         400,
@@ -406,7 +386,6 @@ export const resetPassword = async (req, res, next) => {
     user.refresh_token = null;
     await user.save();
 
-    await deleteRefreshToken(user.id);
     await invalidateUserCache(user.id);
 
     res.status(200).json({

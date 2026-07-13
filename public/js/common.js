@@ -83,3 +83,48 @@ async function apiRequest(url, options = {}, retry = true) {
 
   return data;
 }
+
+/* ── Theme Toggle ── */
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('sms-theme', next);
+
+  updateThemeButtons(next);
+
+  // Re-render Google Sign-In button for new theme
+  if (typeof initGoogleSignIn === 'function') {
+    const container = document.getElementById('google-signin-btn');
+    if (container) {
+      container.innerHTML = '';
+      initGoogleSignIn();
+    }
+  }
+}
+
+function updateThemeButtons(theme) {
+  document.querySelectorAll('.theme-toggle').forEach(function(btn) {
+    var icon = btn.querySelector('.theme-icon');
+    var label = btn.querySelector('.theme-label');
+    if (icon) icon.textContent = theme === 'dark' ? '🌙' : '☀️';
+    if (label) label.textContent = theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+  });
+
+  document.querySelectorAll('.auth-theme-toggle').forEach(function(btn) {
+    btn.textContent = theme === 'dark' ? '🌙' : '☀️';
+  });
+}
+
+// Attach click handlers and set initial labels on DOM ready
+document.addEventListener('DOMContentLoaded', function() {
+  var theme = document.documentElement.getAttribute('data-theme') || 'dark';
+  updateThemeButtons(theme);
+
+  // Attach click handlers (CSP-safe, no inline onclick)
+  document.querySelectorAll('.theme-toggle, .auth-theme-toggle').forEach(function(btn) {
+    btn.addEventListener('click', toggleTheme);
+  });
+});

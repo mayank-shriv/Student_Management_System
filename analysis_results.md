@@ -2,7 +2,7 @@
 
 ## Overview
 
-A **production-grade, full-stack Node.js web application** for managing students, subjects, attendance, and marks. It follows the **MVC (Model-View-Controller)** pattern with a REST API backend and a vanilla HTML/CSS/JS frontend served as static files.
+A Node.js student management system for handling students, subjects, attendance, and marks. It uses an MVC-style structure with a REST API backend and static HTML/CSS/JS frontend.
 
 **Author:** Mayank Shrivastava  
 **Runtime:** Node.js ≥ 18 (ES Modules)  

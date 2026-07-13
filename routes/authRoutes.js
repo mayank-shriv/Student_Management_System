@@ -4,23 +4,13 @@ import * as authController from '../controllers/authController.js';
 import { googleLogin } from '../controllers/googleAuth.js';
 import validate from '../middleware/validate.js';
 import rateLimit from 'express-rate-limit';
-import RedisStore from 'rate-limit-redis';
-import { redis, isRedisReady } from '../config/redis.js';
 import auth from '../middleware/auth.js';
 
 const router = express.Router();
 
-const createRedisStore = () => {
-  if (!isRedisReady()) return undefined;
-  return new RedisStore({
-    sendCommand: (...args) => redis.call(...args),
-  });
-};
-
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
-  store: createRedisStore(),
   message: {
     status: 'fail',
     message: 'Too many login attempts. Please try again after 15 minutes.',
@@ -72,7 +62,6 @@ router.post(
 const forgotPasswordLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 3,
-  store: createRedisStore(),
   message: {
     status: 'fail',
     message: 'Too many password reset requests. Please try again after 15 minutes.',
@@ -108,12 +97,43 @@ router.post(
   authController.resetPassword
 );
 
-router.post('/refresh', authController.refresh);
-router.post('/logout', authController.logout);
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  message: {
+    status: 'fail',
+    message: 'Too many refresh requests. Please try again later.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const logoutLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    status: 'fail',
+    message: 'Too many logout requests. Please try again later.',
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+router.post('/refresh', refreshLimiter, authController.refresh);
+router.post('/logout', logoutLimiter, authController.logout);
 
 router.get('/me', auth, authController.getMe);
 
-router.post('/google', googleLogin);
+router.post(
+  '/google',
+  [
+    body('credential')
+      .trim()
+      .notEmpty().withMessage('Google credential token is required'),
+    validate,
+  ],
+  googleLogin
+);
 
 router.get('/google-client-id', (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID || null });

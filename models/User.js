@@ -1,91 +1,61 @@
-import { DataTypes } from 'sequelize';
-import sequelize from '../config/database.js';
+import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-const User = sequelize.define('User', {
-  id: {
-    type: DataTypes.INTEGER,
-    primaryKey: true,
-    autoIncrement: true,
-  },
+const userSchema = new mongoose.Schema({
   name: {
-    type: DataTypes.STRING(100),
-    allowNull: false,
-    validate: {
-      notEmpty: { msg: 'Name is required' },
-      len: { args: [2, 100], msg: 'Name must be between 2 and 100 characters' },
-    },
+    type: String,
+    required: [true, 'Name is required'],
+    trim: true,
+    minlength: [2, 'Name must be between 2 and 100 characters'],
+    maxlength: [100, 'Name must be between 2 and 100 characters'],
   },
   email: {
-    type: DataTypes.STRING(255),
-    allowNull: false,
-    unique: { msg: 'Email already registered' },
-    validate: {
-      isEmail: { msg: 'Please provide a valid email' },
-    },
+    type: String,
+    required: [true, 'Please provide a valid email'],
+    unique: true,
+    lowercase: true,
+    trim: true,
+    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
   },
   password: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    validate: {
-      passwordLength(value) {
-        if (value !== null && value !== undefined && value.length < 6) {
-          throw new Error('Password must be at least 6 characters');
-        }
-      },
-    },
+    type: String,
+    minlength: [6, 'Password must be at least 6 characters'],
+    select: false,
   },
   google_id: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-    // Remove unique constraint to avoid exceeding MySQL's max key limit during sync
-    unique: false,
+    type: String,
+    unique: true,
+    sparse: true,
   },
-  refresh_token: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-  },
-  reset_token: {
-    type: DataTypes.STRING(255),
-    allowNull: true,
-  },
-  reset_token_expires: {
-    type: DataTypes.DATE,
-    allowNull: true,
-  },
+  refresh_token: String,
+  reset_token: String,
+  reset_token_expires: Date,
   role: {
-    type: DataTypes.ENUM('faculty', 'student'),
-    allowNull: false,
-    defaultValue: 'student',
+    type: String,
+    enum: ['faculty', 'student'],
+    default: 'student',
+    required: true,
   },
 }, {
-  tableName: 'users',
   timestamps: true,
-  indexes: [
-    { unique: true, fields: ['email'] },
-  ],
-  hooks: {
-    beforeCreate: async (user) => {
-      if (user.password) {
-        user.password = await bcrypt.hash(user.password, 12);
-      }
-    },
-    beforeUpdate: async (user) => {
-      if (user.changed('password')) {
-        user.password = await bcrypt.hash(user.password, 12);
-      }
-    },
-  },
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
 });
 
-User.prototype.comparePassword = async function (candidatePassword) {
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password') || !this.password) return next();
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
+
+userSchema.methods.comparePassword = async function (candidatePassword) {
   if (!this.password) return false;
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-User.prototype.toSafeObject = function () {
-  const { id, name, email, role, createdAt } = this;
-  return { id, name, email, role, createdAt };
+userSchema.methods.toSafeObject = function () {
+  const { _id, name, email, role, createdAt } = this;
+  return { id: _id, name, email, role, createdAt };
 };
 
-export default User;
+export default mongoose.model('User', userSchema);

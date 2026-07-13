@@ -135,9 +135,16 @@ function populateSubjectDropdowns() {
     const el = document.getElementById(id);
     if (!el) return;
     const current = el.value;
-    el.innerHTML = '<option value="">Select subject</option>';
+    el.innerHTML = '';
+    const defaultOpt = document.createElement('option');
+    defaultOpt.value = '';
+    defaultOpt.textContent = 'Select subject';
+    el.appendChild(defaultOpt);
     allSubjects.forEach((subject) => {
-      el.innerHTML += `<option value="${subject.id}">${subject.code} - ${subject.name}</option>`;
+      const opt = document.createElement('option');
+      opt.value = subject.id;
+      opt.textContent = `${subject.code} - ${subject.name}`;
+      el.appendChild(opt);
     });
     el.value = current;
   });

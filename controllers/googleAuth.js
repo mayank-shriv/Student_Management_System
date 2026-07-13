@@ -1,7 +1,7 @@
 import { OAuth2Client } from 'google-auth-library';
-import { User, Student, sequelize } from '../models/index.js';
+import mongoose from 'mongoose';
+import { User, Student } from '../models/index.js';
 import AppError from '../utils/AppError.js';
-import logger from '../config/logger.js';
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
@@ -30,7 +30,7 @@ export const googleLogin = async (req, res, next) => {
     try {
       payload = await verifyGoogleToken(credential);
     } catch (err) {
-      logger.error(`Google token verification failed: ${err.message}`);
+      console.error(`Google token verification failed: ${err.message}`);
       throw new AppError('Invalid Google token. Please try again.', 401);
     }
 
@@ -40,12 +40,26 @@ export const googleLogin = async (req, res, next) => {
       throw new AppError('Unable to retrieve email from Google account.', 400);
     }
 
-    let user = await User.findOne({ where: { email } });
+    // Need +password to check if this is a password-based account
+    let user = await User.findOne({ email }).select('+password');
 
     if (user) {
       if (!user.google_id) {
+        // Security: Do NOT auto-link Google to existing password-based accounts.
+        // The user must log in with their password first, then link Google.
+        if (user.password) {
+          throw new AppError(
+            'An account with this email already exists. Please log in with your password first.',
+            409
+          );
+        }
+        // If user has no password (was created via Google previously but google_id is missing),
+        // safe to link since they have no other auth method.
         user.google_id = googleId;
-        await user.save({ fields: ['google_id'] });
+        await user.save();
+      } else if (user.google_id !== googleId) {
+        // Existing Google ID doesn't match — different Google account
+        throw new AppError('This email is linked to a different Google account.', 409);
       }
     } else {
       if (!role) {
@@ -63,27 +77,30 @@ export const googleLogin = async (req, res, next) => {
         }
       }
 
-      const t = await sequelize.transaction();
+      const session = await mongoose.startSession();
+      session.startTransaction();
       try {
-        user = await User.create(
-          { name: name || email.split('@')[0], email, google_id: googleId, role },
-          { transaction: t }
-        );
+        user = new User({ name: name || email.split('@')[0], email, google_id: googleId, role });
+        await user.save({ session });
 
         if (role === 'student') {
           if (!enrollment_no) {
             throw new AppError('Enrollment number is required for students.', 400);
           }
-          await Student.create(
-            { user_id: user.id, enrollment_no: enrollment_no, department: department || null },
-            { transaction: t }
-          );
+          const student = new Student({
+            user_id: user._id,
+            enrollment_no,
+            department: department || null,
+          });
+          await student.save({ session });
         }
 
-        await t.commit();
+        await session.commitTransaction();
       } catch (err) {
-        await t.rollback();
+        await session.abortTransaction();
         throw err;
+      } finally {
+        session.endSession();
       }
     }
 
