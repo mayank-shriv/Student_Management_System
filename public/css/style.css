@@ -118,9 +118,9 @@ a:hover {
 .auth-container {
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
   min-height: 100vh;
-  padding: 1.5rem;
+  padding: 2rem 1.5rem;
   background: var(--bg-primary);
 }
 
@@ -130,9 +130,11 @@ a:hover {
   border-radius: var(--radius-xl);
   padding: 2.5rem;
   width: 100%;
-  max-width: 420px;
+  max-width: 480px;
   box-shadow: var(--shadow-lg);
   animation: fadeInUp 0.4s ease;
+  /* Ensure card is vertically centered when content is shorter than viewport */
+  margin: auto 0;
 }
 
 .auth-card h1 {
@@ -219,6 +221,12 @@ a:hover {
   font-size: 0.9rem;
   transition: border-color var(--transition);
   outline: none;
+  /* Tells the browser to theme the native option popup in dark/light mode */
+  color-scheme: dark;
+}
+
+[data-theme="light"] .form-group select {
+  color-scheme: light;
 }
 
 .form-group input:focus,
@@ -231,6 +239,17 @@ a:hover {
   color: var(--text-muted);
 }
 
+/* Muted placeholder option (the empty first <option>) */
+.form-group select:invalid,
+.form-group select option[value=""] {
+  color: var(--text-muted);
+}
+
+/* Real selected values stay in primary color */
+.form-group select:not(:invalid) {
+  color: var(--text-primary);
+}
+
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -239,11 +258,11 @@ a:hover {
 
 .student-fields {
   display: none;
-  animation: fadeInUp 0.3s ease;
 }
 
 .student-fields.visible {
   display: block;
+  animation: fadeInUp 0.3s ease;
 }
 
 /* ── Buttons ── */
@@ -1027,6 +1046,7 @@ select {
 
   .auth-card {
     padding: 1.5rem;
+    max-width: 100%;
   }
 
   .modal {
@@ -1084,6 +1104,7 @@ select {
   .auth-card {
     padding: 1.25rem;
     border-radius: var(--radius-lg);
+    max-width: 100%;
   }
 
   .auth-card h1 {
