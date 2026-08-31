@@ -13,6 +13,7 @@ import errorHandler from './middleware/errorHandler.js';
 import { connectDB } from './models/index.js';
 
 import authRoutes from './routes/authRoutes.js';
+import contactRoutes from './routes/contactRoutes.js';
 import facultyRoutes from './routes/facultyRoutes.js';
 import studentRoutes from './routes/studentRoutes.js';
 
@@ -73,6 +74,7 @@ app.use(express.static(path.join(__dirname, 'public'), {
 app.use('/api/auth', authRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/student', studentRoutes);
+app.use('/api/contact', contactRoutes);
 
 app.get('/api/health', async (req, res) => {
     try {

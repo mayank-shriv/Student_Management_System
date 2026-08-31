@@ -1,11 +1,12 @@
 :root {
-    --navy: #183833;
-    --ink: #25473f;
-    --gold: #d57956;
-    --cream: #f3eee4;
-    --paper: #fffdf8;
-    --line: #d9d5ca;
-    --muted: #687d75;
+    --navy: #0f172e;
+    --ink: #1e3a8a;
+    --blue: #0284c7;
+    --gold: #0284c7;
+    --cream: #f0f9ff;
+    --paper: #ffffff;
+    --line: #cbd5e1;
+    --muted: #475569;
     --serif: Georgia, 'Times New Roman', serif;
     --sans: 'Trebuchet MS', Arial, sans-serif
 }
