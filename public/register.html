@@ -1,97 +1,254 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Student Management System — Create your account">
-  <title>Register — Student Management System</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
-  <link rel="stylesheet" href="/css/style.css">
-  <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('sms-theme')||'dark');</script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Student Management System — Create your account">
+    <title>Register — Student Management System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="/css/style.css?v=evergreen-2026">
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('sms-theme') || 'dark');</script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        .password-field {
+            position: relative;
+        }
+
+        .password-field input {
+            padding-right: 4rem;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: .75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 0;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: .72rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .terms-row {
+            display: flex;
+            align-items: flex-start;
+            gap: .7rem;
+            margin: 1rem 0 1.25rem;
+            font-size: .82rem;
+            color: var(--text-secondary);
+        }
+
+        .terms-row input {
+            width: auto;
+            margin-top: .18rem;
+        }
+    </style>
 </head>
+
 <body>
-  <button class="auth-theme-toggle" id="theme-toggle" title="Toggle theme">🌙</button>
-  <div class="auth-container">
-    <div class="auth-card">
-      <h1>Create Account</h1>
-      <p class="subtitle">Register as Faculty or Student</p>
+    <button class="auth-theme-toggle" id="theme-toggle" title="Toggle theme">🌙</button>
+    <div class="auth-container">
+        <div class="auth-card">
+            <h1>Create Account</h1>
+            <p class="subtitle">Register as Faculty or Student</p>
 
-      <div id="alert-box" class="hidden" style="padding:0.75rem 1rem; border-radius:var(--radius-md); margin-bottom:1rem; font-size:0.85rem;"></div>
-
-      <!-- Google Sign-In (creates a student account) -->
-      <div id="google-signin-btn" class="google-btn-wrapper"></div>
-
-      <div class="auth-divider">
-        <span>or register with email</span>
-      </div>
-
-      <form id="register-form" autocomplete="on">
-        <div class="form-group">
-          <label for="name">Full Name</label>
-          <input type="text" id="name" name="name" placeholder="John Doe" required>
-        </div>
-
-        <div class="form-group">
-          <label for="email">Email Address</label>
-          <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
-        </div>
-
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" placeholder="Min 6 characters with a number" required autocomplete="new-password">
-        </div>
-
-        <div class="form-group">
-          <label for="confirm-password">Confirm Password</label>
-          <input type="password" id="confirm-password" name="confirm-password" placeholder="Re-enter your password" required autocomplete="new-password">
-        </div>
-
-        <div class="form-group">
-          <label for="role">Role</label>
-          <select id="role" name="role" required>
-            <option value="">Select your role</option>
-            <option value="faculty">Faculty</option>
-            <option value="student">Student</option>
-          </select>
-        </div>
-
-        <div id="student-fields" class="student-fields">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="enrollment_no">Enrollment No.</label>
-              <input type="text" id="enrollment_no" name="enrollment_no" placeholder="e.g. ENR2024001">
+            <div id="alert-box" class="hidden"
+                style="padding:0.75rem 1rem; border-radius:var(--radius-md); margin-bottom:1rem; font-size:0.85rem;">
             </div>
-            <div class="form-group">
-              <label for="department">Department</label>
-              <input type="text" id="department" name="department" placeholder="e.g. Computer Science">
+
+            <!-- Google Sign-In (creates a student account) -->
+            <div id="google-signin-btn" class="google-btn-wrapper"></div>
+
+            <div class="auth-divider">
+                <span>or register with email</span>
             </div>
-          </div>
+
+            <form id="register-form" autocomplete="on">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input type="text" id="name" name="name" placeholder="John Doe" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="you@example.com" required
+                        autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="password-field">
+                        <input type="password" id="password" name="password"
+                            placeholder="Min 6 characters with a number" required autocomplete="new-password">
+                        <button type="button" class="password-toggle" data-target="password"
+                            aria-label="Show password">Show</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm-password">Confirm Password</label>
+                    <div class="password-field">
+                        <input type="password" id="confirm-password" name="confirm-password"
+                            placeholder="Re-enter your password" required autocomplete="new-password">
+                        <button type="button" class="password-toggle" data-target="confirm-password"
+                            aria-label="Show password">Show</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="role">Role</label>
+                    <select id="role" name="role" required>
+                        <option value="">Select your role</option>
+                        <option value="faculty">Faculty</option>
+                        <option value="student">Student</option>
+                    </select>
+                </div>
+
+                <div id="student-fields" class="student-fields">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="enrollment_no">Enrollment No.</label>
+                            <input type="text" id="enrollment_no" name="enrollment_no" placeholder="e.g. ENR2024001">
+                        </div>
+                        <div class="form-group">
+                            <label for="class">Class</label>
+                            <input type="text" id="class" name="class" placeholder="e.g. CS-A, FY-B, MCA-2">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="faculty-fields" class="student-fields">
+                    <div class="form-group">
+                        <label for="invite_code">Faculty Invite Code</label>
+                        <input type="text" id="invite_code" name="invite_code"
+                            placeholder="Enter invite code provided by admin">
+                    </div>
+                </div>
+
+                <div class="terms-row">
+                    <input type="checkbox" id="terms-accepted" name="terms-accepted" required>
+                    <label for="terms-accepted">I agree to the <a href="#" id="open-terms"
+                            style="color: #c46847; text-decoration: underline;">terms and conditions</a></label>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" id="register-btn">
+                    Create Account
+                </button>
+            </form>
+
+            <p class="text-center mt-2" style="font-size:0.85rem; color:var(--text-secondary);">
+                Already have an account? <a href="/">Sign in</a>
+            </p>
         </div>
-
-        <div id="faculty-fields" class="student-fields">
-          <div class="form-group">
-            <label for="invite_code">Faculty Invite Code</label>
-            <input type="text" id="invite_code" name="invite_code" placeholder="Enter invite code provided by admin">
-          </div>
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-block" id="register-btn">
-          Create Account
-        </button>
-      </form>
-
-      <p class="text-center mt-2" style="font-size:0.85rem; color:var(--text-secondary);">
-        Already have an account? <a href="/">Sign in</a>
-      </p>
     </div>
-  </div>
 
-  <div class="toast-container" id="toast-container"></div>
+    <div class="toast-container" id="toast-container"></div>
 
-  <script src="/js/common.js"></script>
-  <script src="/js/auth.js"></script>
+    <!-- Terms and Conditions Modal -->
+    <div id="terms-modal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto;">
+        <div
+            style="background: white; margin: 2rem auto; padding: 2rem; max-width: 600px; border-radius: 8px; position: relative; top: 2rem;">
+            <h2 style="margin-top: 0; color: #183833;">Terms and Conditions</h2>
+
+            <div style="max-height: 400px; overflow-y: auto; font-size: 0.9rem; line-height: 1.6; color: #333;">
+                <h3>1. Account Registration</h3>
+                <p>By registering for an account, you agree to provide accurate, complete, and current information. You
+                    are responsible for maintaining the confidentiality of your password and account information.</p>
+
+                <h3>2. Acceptable Use</h3>
+                <p>You agree to use this system only for educational purposes. You will not:</p>
+                <ul>
+                    <li>Access, use, or share another person's account without permission</li>
+                    <li>Post offensive, harmful, or inappropriate content</li>
+                    <li>Attempt to gain unauthorized access to system resources</li>
+                    <li>Use automated tools or scripts to access the system</li>
+                    <li>Disrupt or interfere with system operations</li>
+                </ul>
+
+                <h3>3. User Responsibilities</h3>
+                <p>As a user, you are responsible for:</p>
+                <ul>
+                    <li>Maintaining accurate personal information</li>
+                    <li>Protecting your login credentials</li>
+                    <li>Reporting unauthorized access immediately</li>
+                    <li>Complying with all applicable laws and policies</li>
+                </ul>
+
+                <h3>4. Data Privacy</h3>
+                <p>We collect and process personal information in accordance with applicable data protection laws. Your
+                    data will be used only for educational administration and will not be shared with third parties
+                    without your consent, except as required by law.</p>
+
+                <h3>5. Intellectual Property</h3>
+                <p>All course materials, content, and resources provided through this system are the intellectual
+                    property of the school and are for educational use only. Reproduction or distribution without
+                    permission is prohibited.</p>
+
+                <h3>6. System Availability</h3>
+                <p>While we strive to maintain continuous system availability, we do not guarantee uninterrupted access.
+                    We reserve the right to perform maintenance and may temporarily suspend access as necessary.</p>
+
+                <h3>7. Limitation of Liability</h3>
+                <p>The school is not liable for any damages resulting from system unavailability, data loss, or
+                    unauthorized access due to user negligence.</p>
+
+                <h3>8. Termination of Access</h3>
+                <p>We reserve the right to suspend or terminate access for violation of these terms or for any reason
+                    without prior notice.</p>
+
+                <h3>9. Changes to Terms</h3>
+                <p>We may update these terms at any time. Continued use of the system constitutes acceptance of updated
+                    terms.</p>
+
+                <h3>10. Contact Information</h3>
+                <p>For questions about these terms, contact the school administration at admin@school.edu</p>
+            </div>
+
+            <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                <button id="accept-terms"
+                    style="flex: 1; padding: 0.75rem; background: #c46847; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Accept</button>
+                <button id="close-terms"
+                    style="flex: 1; padding: 0.75rem; background: #dfe5e8; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        // Terms and Conditions Modal
+        const termsModal = document.getElementById('terms-modal');
+        const openTermsBtn = document.getElementById('open-terms');
+        const acceptTermsBtn = document.getElementById('accept-terms');
+        const closeTermsBtn = document.getElementById('close-terms');
+        const termsCheckbox = document.getElementById('terms-accepted');
+
+        openTermsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            termsModal.style.display = 'block';
+        });
+
+        acceptTermsBtn.addEventListener('click', () => {
+            termsCheckbox.checked = true;
+            termsModal.style.display = 'none';
+        });
+
+        closeTermsBtn.addEventListener('click', () => {
+            termsModal.style.display = 'none';
+        });
+
+        termsModal.addEventListener('click', (e) => {
+            if (e.target === termsModal) {
+                termsModal.style.display = 'none';
+            }
+        });
+    </script>
 </body>
+
 </html>

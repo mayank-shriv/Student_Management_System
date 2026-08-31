@@ -2,92 +2,92 @@ let currentUser = null;
 const loadedTabs = new Set();
 
 function getGrade(marks) {
-  if (marks >= 90) return { grade: 'A+', class: 'badge-success' };
-  if (marks >= 80) return { grade: 'A', class: 'badge-success' };
-  if (marks >= 70) return { grade: 'B', class: 'badge-info' };
-  if (marks >= 60) return { grade: 'C', class: 'badge-warning' };
-  if (marks >= 50) return { grade: 'D', class: 'badge-warning' };
-  return { grade: 'F', class: 'badge-danger' };
+    if (marks >= 90) return { grade: 'A+', class: 'badge-success' };
+    if (marks >= 80) return { grade: 'A', class: 'badge-success' };
+    if (marks >= 70) return { grade: 'B', class: 'badge-info' };
+    if (marks >= 60) return { grade: 'C', class: 'badge-warning' };
+    if (marks >= 50) return { grade: 'D', class: 'badge-warning' };
+    return { grade: 'F', class: 'badge-danger' };
 }
 
 function getAttendanceClass(percentage) {
-  if (percentage >= 75) return 'success';
-  if (percentage >= 50) return 'warning';
-  return 'danger';
+    if (percentage >= 75) return 'success';
+    if (percentage >= 50) return 'warning';
+    return 'danger';
 }
 
 async function checkAuth() {
-  try {
-    const data = await apiRequest('/api/auth/me');
-    currentUser = data.data.user;
+    try {
+        const data = await apiRequest('/api/auth/me');
+        currentUser = data.data.user;
 
-    if (currentUser.role !== 'student') {
-      window.location.href = '/faculty';
-      return;
+        if (currentUser.role !== 'student') {
+            window.location.href = '/faculty';
+            return;
+        }
+
+        document.getElementById('user-name').textContent = currentUser.name;
+        document.getElementById('user-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
+
+        // Only load the dashboard tab initially; others load lazily on click
+        loadDashboard();
+        loadedTabs.add('overview');
+    } catch (error) {
+        window.location.href = '/';
     }
-
-    document.getElementById('user-name').textContent = currentUser.name;
-    document.getElementById('user-avatar').textContent = currentUser.name.charAt(0).toUpperCase();
-
-    // Only load the dashboard tab initially; others load lazily on click
-    loadDashboard();
-    loadedTabs.add('overview');
-  } catch (error) {
-    window.location.href = '/';
-  }
 }
 
 const tabLoaders = {
-  overview: () => { /* already loaded on auth */ },
-  attendance: loadAttendance,
-  marks: loadMarks,
-  subjects: loadSubjects,
+    overview: () => { /* already loaded on auth */ },
+    attendance: loadAttendance,
+    marks: loadMarks,
+    subjects: loadSubjects,
 };
 
 document.querySelectorAll('.nav-item[data-tab]').forEach((item) => {
-  item.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach((navItem) => navItem.classList.remove('active'));
-    item.classList.add('active');
+    item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach((navItem) => navItem.classList.remove('active'));
+        item.classList.add('active');
 
-    document.querySelectorAll('.tab-content').forEach((tab) => tab.classList.remove('active'));
-    document.getElementById(`tab-${item.dataset.tab}`).classList.add('active');
+        document.querySelectorAll('.tab-content').forEach((tab) => tab.classList.remove('active'));
+        document.getElementById(`tab-${item.dataset.tab}`).classList.add('active');
 
-    document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebar').classList.remove('open');
 
-    // Lazy-load tab data on first visit
-    const tabName = item.dataset.tab;
-    if (!loadedTabs.has(tabName) && tabLoaders[tabName]) {
-      tabLoaders[tabName]();
-      loadedTabs.add(tabName);
-    }
-  });
+        // Lazy-load tab data on first visit
+        const tabName = item.dataset.tab;
+        if (!loadedTabs.has(tabName) && tabLoaders[tabName]) {
+            tabLoaders[tabName]();
+            loadedTabs.add(tabName);
+        }
+    });
 });
 
 document.getElementById('mobile-toggle').addEventListener('click', () => {
-  document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebar').classList.toggle('open');
 });
 
 document.getElementById('logout-btn').addEventListener('click', async () => {
-  try {
-    await apiRequest('/api/auth/logout', { method: 'POST' }, false);
-    window.location.href = '/';
-  } catch (error) {
-    showToast(error.message, 'error');
-  }
+    try {
+        await apiRequest('/api/auth/logout', { method: 'POST' }, false);
+        window.location.href = '/';
+    } catch (error) {
+        showToast(error.message, 'error');
+    }
 });
 
 async function loadDashboard() {
-  try {
-    const data = await apiRequest('/api/student/dashboard');
-    const { student, overview, subjectAttendance, marks } = data.data;
+    try {
+        const data = await apiRequest('/api/student/dashboard');
+        const { student, overview, subjectAttendance, marks } = data.data;
 
-    document.getElementById('greeting').textContent = `Welcome, ${student.name}!`;
-    document.getElementById('student-info').textContent = `${student.enrollment_no} - ${student.department || 'No department'}`;
+        document.getElementById('greeting').textContent = `Welcome, ${student.name}!`;
+        document.getElementById('student-info').textContent = `${student.enrollment_no} - ${student.class || 'No class'}`;
 
-    const attClass = getAttendanceClass(overview.overallAttendance);
-    const avgGrade = getGrade(overview.averageMarks);
+        const attClass = getAttendanceClass(overview.overallAttendance);
+        const avgGrade = getGrade(overview.averageMarks);
 
-    document.getElementById('overview-stats').innerHTML = `
+        document.getElementById('overview-stats').innerHTML = `
       <div class="stat-card accent">
         <div class="stat-icon">*</div>
         <div class="stat-value">${overview.totalSubjects}</div>
@@ -108,13 +108,13 @@ async function loadDashboard() {
       </div>
     `;
 
-    const attBody = document.getElementById('overview-attendance-body');
-    if (subjectAttendance.length === 0) {
-      attBody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:2rem;color:var(--text-muted);">No attendance records yet</td></tr>';
-    } else {
-      attBody.innerHTML = subjectAttendance.map((attendance) => {
-        const cls = getAttendanceClass(attendance.percentage);
-        return `
+        const attBody = document.getElementById('overview-attendance-body');
+        if (subjectAttendance.length === 0) {
+            attBody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:2rem;color:var(--text-muted);">No attendance records yet</td></tr>';
+        } else {
+            attBody.innerHTML = subjectAttendance.map((attendance) => {
+                const cls = getAttendanceClass(attendance.percentage);
+                return `
           <tr>
             <td><strong>${escapeHtml(attendance.subject.name)}</strong></td>
             <td>${attendance.present}</td>
@@ -130,16 +130,16 @@ async function loadDashboard() {
             <td><span class="badge badge-${cls === 'success' ? 'success' : cls === 'warning' ? 'warning' : 'danger'}">${attendance.percentage >= 75 ? 'Good' : attendance.percentage >= 50 ? 'Low' : 'Critical'}</span></td>
           </tr>
         `;
-      }).join('');
-    }
+            }).join('');
+        }
 
-    const marksBody = document.getElementById('overview-marks-body');
-    if (marks.length === 0) {
-      marksBody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding:2rem;color:var(--text-muted);">No marks yet</td></tr>';
-    } else {
-      marksBody.innerHTML = marks.map((mark) => {
-        const grade = getGrade(mark.marks);
-        return `
+        const marksBody = document.getElementById('overview-marks-body');
+        if (marks.length === 0) {
+            marksBody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding:2rem;color:var(--text-muted);">No marks yet</td></tr>';
+        } else {
+            marksBody.innerHTML = marks.map((mark) => {
+                const grade = getGrade(mark.marks);
+                return `
           <tr>
             <td><strong>${escapeHtml(mark.subject.name)}</strong></td>
             <td><span class="badge badge-info">${escapeHtml(mark.subject.code)}</span></td>
@@ -147,24 +147,24 @@ async function loadDashboard() {
             <td><span class="badge ${grade.class}">${grade.grade}</span></td>
           </tr>
         `;
-      }).join('');
+            }).join('');
+        }
+    } catch (error) {
+        showToast(`Failed to load dashboard: ${error.message}`, 'error');
     }
-  } catch (error) {
-    showToast(`Failed to load dashboard: ${error.message}`, 'error');
-  }
 }
 
 async function loadAttendance() {
-  try {
-    const data = await apiRequest('/api/student/attendance');
-    const tbody = document.getElementById('attendance-detail-body');
+    try {
+        const data = await apiRequest('/api/student/attendance');
+        const tbody = document.getElementById('attendance-detail-body');
 
-    if (data.data.attendance.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding:2rem;color:var(--text-muted);">No attendance records yet</td></tr>';
-      return;
-    }
+        if (data.data.attendance.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding:2rem;color:var(--text-muted);">No attendance records yet</td></tr>';
+            return;
+        }
 
-    tbody.innerHTML = data.data.attendance.map((attendance) => `
+        tbody.innerHTML = data.data.attendance.map((attendance) => `
       <tr>
         <td>${attendance.date}</td>
         <td><strong>${escapeHtml(attendance.subject.name)}</strong></td>
@@ -172,24 +172,24 @@ async function loadAttendance() {
         <td><span class="badge ${attendance.status === 'present' ? 'badge-success' : 'badge-danger'}">${attendance.status}</span></td>
       </tr>
     `).join('');
-  } catch (error) {
-    showToast('Failed to load attendance', 'error');
-  }
+    } catch (error) {
+        showToast('Failed to load attendance', 'error');
+    }
 }
 
 async function loadMarks() {
-  try {
-    const data = await apiRequest('/api/student/marks');
-    const tbody = document.getElementById('marks-detail-body');
+    try {
+        const data = await apiRequest('/api/student/marks');
+        const tbody = document.getElementById('marks-detail-body');
 
-    if (data.data.marks.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding:2rem;color:var(--text-muted);">No marks yet</td></tr>';
-      return;
-    }
+        if (data.data.marks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding:2rem;color:var(--text-muted);">No marks yet</td></tr>';
+            return;
+        }
 
-    tbody.innerHTML = data.data.marks.map((mark) => {
-      const grade = getGrade(mark.marks);
-      return `
+        tbody.innerHTML = data.data.marks.map((mark) => {
+            const grade = getGrade(mark.marks);
+            return `
         <tr>
           <td><strong>${escapeHtml(mark.subject.name)}</strong></td>
           <td><span class="badge badge-info">${escapeHtml(mark.subject.code)}</span></td>
@@ -197,32 +197,32 @@ async function loadMarks() {
           <td><span class="badge ${grade.class}">${grade.grade}</span></td>
         </tr>
       `;
-    }).join('');
-  } catch (error) {
-    showToast('Failed to load marks', 'error');
-  }
+        }).join('');
+    } catch (error) {
+        showToast('Failed to load marks', 'error');
+    }
 }
 
 async function loadSubjects() {
-  try {
-    const data = await apiRequest('/api/student/subjects');
-    const tbody = document.getElementById('subjects-detail-body');
+    try {
+        const data = await apiRequest('/api/student/subjects');
+        const tbody = document.getElementById('subjects-detail-body');
 
-    if (data.data.subjects.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" class="text-center" style="padding:2rem;color:var(--text-muted);">No subjects enrolled yet</td></tr>';
-      return;
-    }
+        if (data.data.subjects.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center" style="padding:2rem;color:var(--text-muted);">No subjects enrolled yet</td></tr>';
+            return;
+        }
 
-    tbody.innerHTML = data.data.subjects.map((subject) => `
+        tbody.innerHTML = data.data.subjects.map((subject) => `
       <tr>
         <td><span class="badge badge-info">${escapeHtml(subject.code)}</span></td>
         <td><strong>${escapeHtml(subject.name)}</strong></td>
         <td>${subject.faculty ? escapeHtml(subject.faculty.name) : '-'}</td>
       </tr>
     `).join('');
-  } catch (error) {
-    showToast('Failed to load subjects', 'error');
-  }
+    } catch (error) {
+        showToast('Failed to load subjects', 'error');
+    }
 }
 
 checkAuth();

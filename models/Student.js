@@ -13,7 +13,7 @@ const studentSchema = new mongoose.Schema({
     unique: true,
     trim: true,
   },
-  department: {
+  class: {
     type: String,
     trim: true,
   },

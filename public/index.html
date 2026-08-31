@@ -1,63 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Student Management System — Secure login for Faculty and Students">
-  <title>Login — Student Management System</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
-  <link rel="stylesheet" href="/css/style.css">
-  <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('sms-theme')||'dark');</script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SGM Public School — Learn, Grow, Succeed">
+    <title>SGM Public School | Learn, Grow, Succeed</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="/css/home.css?v=evergreen-2026">
 </head>
+
 <body>
-  <button class="auth-theme-toggle" id="theme-toggle" title="Toggle theme">🌙</button>
-  <div class="auth-container">
-    <div class="auth-card">
-      <h1>Welcome Back</h1>
-      <p class="subtitle">Sign in to your account to continue</p>
+    <header class="site-header">
+        <a class="brand" href="#home" aria-label="SGM Public School home"><span
+                class="brand-mark">SGM</span><span><strong>SGM</strong> Public School<small>Learn. Grow.
+                    Succeed.</small></span></a>
+        <button class="menu-toggle" aria-label="Open navigation" aria-expanded="false">☰</button>
+        <nav class="site-nav" aria-label="Main navigation">
+            <a class="active" href="#home">Home</a><a href="#about">About Us</a><a href="#academics">Academics</a><a
+                href="#activities">Activities</a><a href="#gallery">Gallery</a><a href="#contact">Contact Us</a>
+            <span class="nav-divider"></span>
+            <a class="nav-login register" href="/register">Register</a>
+            <a class="nav-login login" href="/login">Login</a>
+        </nav>
+    </header>
 
-      <div id="alert-box" class="hidden" style="padding:0.75rem 1rem; border-radius:var(--radius-md); margin-bottom:1rem; font-size:0.85rem;"></div>
-
-      <form id="login-form" autocomplete="on">
-        <div class="form-group">
-          <label for="email">Email Address</label>
-          <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
-        </div>
-
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="current-password">
-        </div>
-
-        <button type="submit" class="btn btn-primary btn-block" id="login-btn">
-          Sign In
-        </button>
-      </form>
-
-      <!-- Google Sign-In Divider -->
-      <div class="auth-divider">
-        <span>or</span>
-      </div>
-
-      <!-- Google Sign-In Button -->
-      <div id="google-signin-btn" class="google-btn-wrapper"></div>
-
-      <p class="text-center mt-2" style="font-size:0.85rem;">
-        <a href="/forgot-password" class="link-muted">Forgot your password?</a>
-      </p>
-
-      <p class="text-center mt-1" style="font-size:0.85rem; color:var(--text-secondary);">
-        Don't have an account? <a href="/register">Create one</a>
-      </p>
-    </div>
-  </div>
-
-  <div class="toast-container" id="toast-container"></div>
-
-  <script src="/js/common.js"></script>
-  <script src="/js/auth.js"></script>
+    <main>
+        <section class="hero" id="home">
+            <div class="hero-copy">
+                <p class="eyebrow">A place to become your best self</p>
+                <h1>Learn with purpose.<br><em>Lead with heart.</em></h1>
+                <p class="hero-text">At SGM Public School, every child is encouraged to ask better questions, discover
+                    their strengths, and make a meaningful difference.</p>
+                <div class="hero-actions"><a class="button button-gold" href="#about">Explore School
+                        <span>↗</span></a><a class="button button-outline" href="#contact">Contact Us</a></div>
+                <div class="hero-proof"><strong>25+</strong><span>years of<br>shaping
+                        futures</span><i></i><strong>1,200</strong><span>curious<br>young minds</span></div>
+            </div>
+            <div class="hero-image">
+                <div class="image-note"><span>✦</span><strong>Where curiosity<br>takes root</strong></div>
+            </div>
+        </section>
+        <section class="intro section" id="about">
+            <div class="section-label">01 / Welcome</div>
+            <div class="intro-grid">
+                <div>
+                    <h2>Every child carries<br>a <em>world</em> within.</h2>
+                </div>
+                <div>
+                    <p class="lead">SGM Public School is a joyful, inclusive community where academic excellence meets
+                        character, creativity, and care.</p>
+                    <p>From the first question in the classroom to the final applause on the stage, we create
+                        experiences that help students grow into thoughtful, confident citizens of tomorrow.</p><a
+                        class="text-link" href="#academics">Discover our approach <span>→</span></a>
+                </div>
+            </div>
+        </section>
+        <section class="highlights section">
+            <div class="section-heading">
+                <div>
+                    <div class="section-label">02 / The SGM difference</div>
+                    <h2>A school that feels<br><em>like possibility.</em></h2>
+                </div>
+                <p>Rooted in strong values, open to new ideas, and always looking ahead.</p>
+            </div>
+            <div class="highlight-grid">
+                <article><span class="card-number">01</span>
+                    <div class="icon-circle">✦</div>
+                    <h3>Learning that lasts</h3>
+                    <p>Active classrooms turn concepts into confidence and curiosity into capability.</p>
+                </article>
+                <article class="featured"><span class="card-number">02</span>
+                    <div class="icon-circle">↗</div>
+                    <h3>Character in action</h3>
+                    <p>Empathy, integrity, and responsibility are practiced every day, not just taught.</p>
+                </article>
+                <article><span class="card-number">03</span>
+                    <div class="icon-circle">⌁</div>
+                    <h3>Room to flourish</h3>
+                    <p>Sports, arts, and clubs give every student a stage to find their spark.</p>
+                </article>
+            </div>
+        </section>
+        <section class="split-section section" id="academics">
+            <div class="split-photo academics-photo"></div>
+            <div class="split-copy">
+                <div class="section-label">03 / Academics</div>
+                <h2>Build a strong<br><em>foundation.</em></h2>
+                <p>Our curriculum balances rigorous core subjects with projects, discussion, and real-world exploration
+                    across Classes I–XII.</p>
+                <div class="detail-list">
+                    <div><strong>01</strong><span>Future-ready curriculum</span></div>
+                    <div><strong>02</strong><span>Mentor-led learning</span></div>
+                    <div><strong>03</strong><span>Continuous assessment</span></div>
+                </div><a class="button button-dark" href="#contact">Talk to admissions <span>↗</span></a>
+            </div>
+        </section>
+        <section class="activities section" id="activities">
+            <div class="section-heading">
+                <div>
+                    <div class="section-label">04 / Beyond the classroom</div>
+                    <h2>Find your <em>spark.</em></h2>
+                </div>
+                <p>Because the best lessons often happen when the timetable ends.</p>
+            </div>
+            <div class="activity-grid">
+                <article class="activity-card sports">
+                    <div><span>01</span>
+                        <h3>Sports & wellness</h3>
+                        <p>Teamwork, resilience, and the joy of movement.</p>
+                    </div>
+                </article>
+                <article class="activity-card arts">
+                    <div><span>02</span>
+                        <h3>Arts & culture</h3>
+                        <p>Dance, music, theatre, and the confidence to express.</p>
+                    </div>
+                </article>
+                <article class="activity-card ideas">
+                    <div><span>03</span>
+                        <h3>Ideas in action</h3>
+                        <p>Debates, science exhibitions, and curious minds at work.</p>
+                    </div>
+                </article>
+            </div>
+        </section>
+        <section class="campus section" id="gallery">
+            <div class="campus-copy">
+                <div class="section-label">05 / Life at SGM</div>
+                <h2>More than a<br><em>school day.</em></h2>
+                <p>Bright studios. Open spaces. A library made for getting lost in a good idea. Our campus is designed
+                    for learning in every direction.</p><a class="text-link" href="#contact">Visit our campus
+                    <span>→</span></a>
+            </div>
+            <div class="campus-mosaic">
+                <div></div>
+                <div></div>
+                <div></div>
+            </div>
+        </section>
+        <section class="notice-band section">
+            <div class="section-label">06 / Keep in the loop</div>
+            <div class="notice-grid">
+                <div><span class="notice-date">18 JUN 2026</span>
+                    <h3>Admissions open for the 2026–27 session</h3>
+                    <p>Applications are now being accepted for Classes I–IX.</p>
+                </div>
+                <div><span class="notice-date">24 JUN 2026</span>
+                    <h3>Parent orientation morning</h3>
+                    <p>Meet the people and ideas behind your child’s new journey.</p>
+                </div>
+                <div><span class="notice-date">05 JUL 2026</span>
+                    <h3>Inter-house athletics meet</h3>
+                    <p>A day of spirited competition and community.</p>
+                </div>
+            </div>
+        </section>
+        <section class="contact section" id="contact">
+            <div class="contact-copy">
+                <div class="section-label">07 / Say hello</div>
+                <h2>Let’s start a<br><em>conversation.</em></h2>
+                <p>Have a question about admissions, academics, or life at SGM? Our team would love to hear from you.
+                </p>
+                <div class="contact-details"><span>✉</span>
+                    <div><small>Email us</small><strong>hello@sgmpublicschool.edu.in</strong></div>
+                </div>
+                <div class="contact-details"><span>⌖</span>
+                    <div><small>Visit us</small><strong>SGM Public School, New Delhi</strong></div>
+                </div>
+            </div>
+            <form class="contact-form" id="contact-form"><label>Name<input name="name" required
+                        placeholder="Your name"></label><label>Email<input type="email" name="email" required
+                        placeholder="you@example.com"></label><label>Phone number<input name="phone" required
+                        placeholder="+91 XXXXX XXXXX"></label><label>Message<textarea name="message" rows="4" required
+                        placeholder="How can we help?"></textarea></label><button class="button button-gold"
+                    type="submit">Send message <span>↗</span></button>
+                <p class="form-success" hidden>Thank you. We’ll be in touch shortly.</p>
+            </form>
+        </section>
+    </main>
+    <footer><a class="brand" href="#home"><span class="brand-mark">SGM</span><span><strong>SGM</strong> Public
+                School<small>Learn. Grow. Succeed.</small></span></a>
+        <div class="footer-links"><a href="#about">About</a><a href="#academics">Academics</a><a
+                href="#activities">Activities</a><a href="#contact">Contact</a></div>
+        <div class="socials"><a href="#contact" aria-label="Instagram">ig</a><a href="#contact"
+                aria-label="Facebook">f</a><a href="#contact" aria-label="YouTube">▶</a></div>
+        <p>© 2025 SGM Public School. All rights reserved.</p>
+    </footer>
+    <script src="/js/home.js"></script>
 </body>
+
 </html>

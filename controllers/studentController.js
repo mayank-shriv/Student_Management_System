@@ -71,7 +71,7 @@ export const getDashboard = catchAsync(async (req, res, next) => {
         name: req.user.name,
         email: req.user.email,
         enrollment_no: student.enrollment_no,
-        department: student.department,
+        class: student.class,
       },
       overview: {
         totalSubjects: subjectSet.size,

@@ -71,7 +71,7 @@ function renderStudents() {
 
   if (allStudents.length === 0) {
     tbody.innerHTML = `
-      <tr><td colspan="4">
+      <tr><td colspan="5">
         <div class="empty-state">
           <div class="empty-icon">STU</div>
           <h3>No students registered yet</h3>
@@ -86,7 +86,7 @@ function renderStudents() {
         <td><strong>${escapeHtml(student.user.name)}</strong></td>
         <td>${escapeHtml(student.user.email)}</td>
         <td><span class="badge badge-info">${escapeHtml(student.enrollment_no)}</span></td>
-        <td>${escapeHtml(student.department || '-')}</td>
+        <td>${escapeHtml(student.class || '-')}</td>
       </tr>
     `).join('');
 }

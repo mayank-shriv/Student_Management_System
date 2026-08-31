@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="SGM Public School portal login">
+    <title>Portal Login | SGM Public School</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;1,500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css?v=evergreen-2026">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: #183833
+        }
+
+        .auth-container {
+            background: linear-gradient(120deg, #183833, #285149);
+            padding: 1.5rem
+        }
+
+        .auth-card {
+            border: 0;
+            box-shadow: 0 20px 60px #0d211e;
+            background: #fff;
+            max-width: 470px
+        }
+
+        .auth-card h1 {
+            font-family: 'Playfair Display', serif;
+            color: #183833;
+            font-size: 2rem
+        }
+
+        .portal-kicker {
+            color: #c46847;
+            font-size: .72rem;
+            font-weight: 700;
+            letter-spacing: 1.6px;
+            text-transform: uppercase;
+            margin-bottom: 1rem
+        }
+
+        .portal-switch {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 1.5rem
+        }
+
+        .portal-switch a {
+            flex: 1;
+            text-align: center;
+            padding: .65rem;
+            border: 1px solid #dfe5e8;
+            font-size: .8rem;
+            color: #536675
+        }
+
+        .portal-switch a.active {
+            background: #183833;
+            color: #fff;
+            border-color: #183833
+        }
+
+        .portal-home {
+            display: inline-block;
+            color: #536675;
+            font-size: .8rem;
+            margin-bottom: 1.5rem
+        }
+
+        .form-group input {
+            background: #f7f8f8;
+            color: #172b3a
+        }
+
+        .btn-primary {
+            background: #c46847
+        }
+
+        .btn-primary:hover {
+            background: #a95034
+        }
+
+        .password-field {
+            position: relative;
+        }
+
+        .password-field input {
+            padding-right: 4rem;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: .75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            border: 0;
+            background: transparent;
+            color: #536675;
+            font-size: .72rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .auth-check-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 1rem 0 1.25rem;
+            font-size: .82rem;
+            color: #536675;
+        }
+
+        .auth-check-row label {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            cursor: pointer;
+        }
+
+        .auth-check-row input {
+            width: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <a class="portal-home" href="/">← Back to SGM Public School</a>
+            <p class="portal-kicker">SGM Public School portal</p>
+            <h1>Welcome back</h1>
+            <p class="subtitle">Sign in to continue to your learning space.</p>
+            <div class="portal-switch"><a class="active" href="/student-login">Student login</a><a
+                    href="/faculty-login">Faculty login</a></div>
+            <div id="alert-box" class="hidden"></div>
+
+            <div id="google-signin-btn" class="google-btn-wrapper" aria-label="Continue with Google"></div>
+
+            <div class="auth-divider"><span>or sign in with email</span></div>
+
+            <form id="login-form" autocomplete="on">
+                <div class="form-group"><label for="email">Email address</label><input type="email" id="email"
+                        name="email" placeholder="student@sgmpublicschool.edu.in" required autocomplete="username">
+                </div>
+                <div class="form-group"><label for="password">Password</label>
+                    <div class="password-field">
+                        <input type="password" id="password" name="password" placeholder="Enter your password" required
+                            autocomplete="current-password">
+                        <button type="button" class="password-toggle" data-target="password"
+                            aria-label="Show password">Show</button>
+                    </div>
+                </div>
+                <div class="auth-check-row">
+                    <label><input type="checkbox" id="remember-me"> Remember me</label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" id="login-btn">Sign in to portal</button>
+            </form>
+            <p class="text-center mt-2" style="font-size:.85rem"><a class="link-muted" href="/forgot-password">Forgot
+                    your password?</a></p>
+        </div>
+    </div>
+    <div class="toast-container" id="toast-container"></div>
+    <script>
+        if (window.location.pathname === '/faculty-login') {
+            document.querySelector('.portal-kicker').textContent = 'SGM Public School faculty portal';
+            document.querySelector('.auth-card h1').textContent = 'Welcome back, faculty';
+            document.querySelector('.auth-card .subtitle').textContent = 'Sign in to manage your classroom and student records.';
+            document.querySelector('.portal-switch a:first-child').classList.remove('active');
+            document.querySelector('.portal-switch a:last-child').classList.add('active');
+        }
+    </script>
+    <script src="/js/common.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        const emailInput = document.getElementById('email');
+        const rememberMe = document.getElementById('remember-me');
+        const savedEmail = localStorage.getItem('sgm-remember-email');
+
+        if (savedEmail && emailInput) {
+            emailInput.value = savedEmail;
+            if (rememberMe) rememberMe.checked = true;
+        }
+
+        if (rememberMe && emailInput) {
+            rememberMe.addEventListener('change', () => {
+                if (rememberMe.checked) {
+                    localStorage.setItem('sgm-remember-email', emailInput.value.trim());
+                } else {
+                    localStorage.removeItem('sgm-remember-email');
+                }
+            });
+
+            emailInput.addEventListener('input', () => {
+                if (rememberMe.checked) {
+                    localStorage.setItem('sgm-remember-email', emailInput.value.trim());
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
