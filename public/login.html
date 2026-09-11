@@ -12,33 +12,34 @@
         href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;1,500&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="/css/style.css?v=evergreen-2026">
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('sms-theme') || 'dark');</script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
         body {
             font-family: 'DM Sans', sans-serif;
-            background: #0f172e
+            background: var(--bg-primary)
         }
 
         .auth-container {
-            background: linear-gradient(120deg, #0f172e, #1e3a8a);
+            background: linear-gradient(120deg, var(--bg-primary), var(--bg-secondary));
             padding: 1.5rem
         }
 
         .auth-card {
             border: 0;
             box-shadow: 0 20px 60px rgba(15, 23, 46, 0.5);
-            background: #fff;
+            background: var(--bg-card);
             max-width: 470px
         }
 
         .auth-card h1 {
             font-family: 'Playfair Display', serif;
-            color: #0f172e;
+            color: var(--text-primary);
             font-size: 2rem
         }
 
         .portal-kicker {
-            color: #0284c7;
+            color: var(--accent);
             font-size: .72rem;
             font-weight: 700;
             letter-spacing: 1.6px;
@@ -56,35 +57,35 @@
             flex: 1;
             text-align: center;
             padding: .65rem;
-            border: 1px solid #cbd5e1;
+            border: 1px solid var(--border);
             font-size: .8rem;
-            color: #64748b
+            color: var(--text-secondary)
         }
 
         .portal-switch a.active {
-            background: #0f172e;
+            background: var(--accent);
             color: #fff;
-            border-color: #0f172e
+            border-color: var(--accent)
         }
 
         .portal-home {
             display: inline-block;
-            color: #64748b;
+            color: var(--text-secondary);
             font-size: .8rem;
             margin-bottom: 1.5rem
         }
 
         .form-group input {
-            background: #f0f9ff;
-            color: #0f172e
+            background: var(--bg-input);
+            color: var(--text-primary)
         }
 
         .btn-primary {
-            background: #0284c7
+            background: var(--accent)
         }
 
         .btn-primary:hover {
-            background: #0369a1
+            background: var(--accent-hover)
         }
 
         .password-field {
@@ -102,7 +103,7 @@
             transform: translateY(-50%);
             border: 0;
             background: transparent;
-            color: #64748b;
+            color: var(--text-secondary);
             font-size: .72rem;
             font-weight: 700;
             cursor: pointer;
@@ -114,7 +115,7 @@
             justify-content: space-between;
             margin: 1rem 0 1.25rem;
             font-size: .82rem;
-            color: #64748b;
+            color: var(--text-secondary);
         }
 
         .auth-check-row label {
@@ -131,6 +132,7 @@
 </head>
 
 <body>
+    <button class="auth-theme-toggle" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">🌙</button>
     <div class="auth-container">
         <div class="auth-card">
             <a class="portal-home" href="/">← Back to Shri Satrugu junior high school</a>

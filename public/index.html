@@ -10,12 +10,15 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
     <link rel="stylesheet" href="/css/home.css?v=evergreen-2026">
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('sms-theme') || 'dark');</script>
 </head>
 
 <body>
     <header class="site-header">
-        <a class="brand" href="#home" aria-label="Shri Satrugu junior high school home"><span
-                class="brand-mark">SSHS</span><span><strong>Shri Satrugu</strong> junior high school<small>Learn. Grow.
+        <a class="brand" href="#home" aria-label="Shri Satrugu junior high school home"><span><strong>Shri
+                    Satrugu</strong> junior
+                high
+                school<small>Learn. Grow.
                     Succeed.</small></span></a>
         <button class="menu-toggle" aria-label="Open navigation" aria-expanded="false">☰</button>
         <nav class="site-nav" aria-label="Main navigation">
@@ -24,6 +27,8 @@
             <span class="nav-divider"></span>
             <a class="nav-login register" href="/register">Register</a>
             <a class="nav-login login" href="/login">Login</a>
+            <button class="home-theme-toggle theme-toggle" type="button" aria-label="Toggle theme"><span
+                    class="theme-icon">🌙</span></button>
         </nav>
     </header>
 
@@ -233,7 +238,7 @@
             </script>
         </section>
     </main>
-    <footer><a class="brand" href="#home"><span class="brand-mark">SSHS</span><span><strong>Shri Satrugu</strong> junior
+    <footer><a class="brand" href="#home"><span><strong>Shri Satrugu</strong> junior
                 high
                 school<small>Learn. Grow. Succeed.</small></span></a>
         <div class="footer-links"><a href="#about">About</a><a href="#academics">Academics</a><a
@@ -242,6 +247,7 @@
                 aria-label="Facebook">f</a><a href="#contact" aria-label="YouTube">▶</a></div>
         <p>© 2025 Shri Satrugu junior high school. All rights reserved.</p>
     </footer>
+    <script src="/js/common.js"></script>
     <script src="/js/home.js"></script>
 </body>
 

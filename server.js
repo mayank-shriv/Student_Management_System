@@ -135,34 +135,54 @@ app.use((req, res) => {
 
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 5000;
 
 const startServer = async () => {
     try {
         await connectDB();
 
-        const server = app.listen(PORT, () => { });
-
-        // Prevent requests from hanging indefinitely
-        server.timeout = 30_000;
-
-        const gracefulShutdown = (signal) => {
-            server.close(async () => {
-                try {
-                    await mongoose.disconnect();
-                } catch (err) {
-                    console.error('Error closing database connections:', err.message);
-                }
-                process.exit(0);
+        const startListening = (port) => {
+            const server = app.listen(port, () => {
+                console.log(`Server running on port ${port}`);
             });
 
-            setTimeout(() => {
+            server.on('error', (error) => {
+                if (error.code === 'EADDRINUSE') {
+                    const nextPort = port + 1;
+                    console.warn(`Port ${port} is already in use. Retrying on port ${nextPort}...`);
+                    startListening(nextPort);
+                    return;
+                }
+
+                console.error('Server error:', error);
                 process.exit(1);
-            }, 10_000);
+            });
+
+            // Prevent requests from hanging indefinitely
+            server.timeout = 30_000;
+
+            const gracefulShutdown = (signal) => {
+                server.close(async () => {
+                    try {
+                        await mongoose.disconnect();
+                    } catch (err) {
+                        console.error('Error closing database connections:', err.message);
+                    }
+                    console.log(`${signal} received. Server shut down gracefully.`);
+                    process.exit(0);
+                });
+
+                setTimeout(() => {
+                    console.error('Graceful shutdown timed out. Force exiting...');
+                    process.exit(1);
+                }, 10_000);
+            };
+
+            process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+            process.on('SIGINT', () => gracefulShutdown('SIGINT'));
         };
 
-        process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-        process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+        startListening(PORT);
     } catch (error) {
         console.error('Unable to start server:', error);
         process.exit(1);
